@@ -128,6 +128,9 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
                 this.dc.instance._viewContainer.element.nativeElement.addEventListener("MSGestureChange",
                     (evt) => { this.onMSGestureChange(evt); });
             });
+            if (!this.igxForContainerSize) {
+                this.vh.instance.notVislbe = true;
+            }
         }
 
         if (this.igxForScrollOrientation === "horizontal") {
@@ -495,6 +498,10 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         this.applyChunkSizeChange();
         if (this.dc && this.state.chunkSize !== this.igxForOf.length) {
             this.dc.instance.notVirtual = false;
+            if (this.igxForScrollOrientation === "vertical") {
+                this.vh.instance.notVislbe = false;
+                this.vh.changeDetectorRef.detectChanges();
+            }
         }
         this._recalcScrollBarSize();
     }

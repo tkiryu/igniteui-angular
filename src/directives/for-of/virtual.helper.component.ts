@@ -9,8 +9,11 @@ export class VirtualHelperComponent implements OnInit {
     @Input() public itemsLength: number;
     public height: number;
 
-    @HostBinding("class")
-    public cssClasses = "igx-vhelper--vertical";
+    @HostBinding("class.igx-vhelper--vertical")
+    public cssClasses = true;
+
+    @HostBinding("class.igx-vhelper--inactive")
+    public notVislbe = false;
 
     constructor(public elementRef: ElementRef) { }
 

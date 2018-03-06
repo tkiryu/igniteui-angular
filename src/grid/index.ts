@@ -20,7 +20,13 @@ import {
   IgxCellTemplateDirective
 } from "./grid.common";
 import { IgxGridComponent } from "./grid.component";
-import { IgxGridFilterConditionPipe, IgxGridFilteringPipe, IgxGridPagingPipe, IgxGridSortingPipe } from "./grid.pipes";
+import {
+    IgxGridFilterConditionPipe,
+    IgxGridFilteringPipe,
+    IgxGridPagingPipe,
+    IgxGridRowPinningPipe,
+    IgxGridSortingPipe
+} from "./grid.pipes";
 import { IgxGridRowComponent } from "./row.component";
 
 @NgModule({
@@ -38,7 +44,8 @@ import { IgxGridRowComponent } from "./row.component";
     IgxGridSortingPipe,
     IgxGridPagingPipe,
     IgxGridFilteringPipe,
-    IgxGridFilterConditionPipe
+    IgxGridFilterConditionPipe,
+    IgxGridRowPinningPipe
   ],
   entryComponents: [
     IgxColumnComponent

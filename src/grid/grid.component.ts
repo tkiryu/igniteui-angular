@@ -1,4 +1,4 @@
-import { DOCUMENT } from "@angular/common";
+﻿import { DOCUMENT } from "@angular/common";
 import {
     AfterContentInit,
     AfterViewInit,
@@ -161,11 +161,17 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     @ViewChildren(IgxGridRowComponent, { read: IgxGridRowComponent })
     public rowList: QueryList<IgxGridRowComponent>;
 
+    @ViewChildren(IgxGridRowComponent, { read: IgxGridRowComponent })
+    public pinnedRowList: QueryList<IgxGridRowComponent>;
+
     @ViewChild("scrollContainer", { read: IgxForOfDirective })
     public parentVirtDir: IgxForOfDirective<any>;
 
     @ViewChild("verticalScrollContainer", { read: IgxForOfDirective })
     public verticalScrollContainer: IgxForOfDirective<any>;
+
+    @ViewChild("theadPinnedTop", { read: IgxForOfDirective })
+    public pinnedTopDir: IgxForOfDirective<any>;
 
     @ViewChild("scr", { read: ElementRef })
     public scr: ElementRef;
@@ -205,6 +211,7 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     public pagingState;
     public calcWidth: number;
     public calcHeight: number;
+    public pinnedRowsHeight = 0;
 
     public cellInEditMode: IgxGridCellComponent;
 
@@ -216,6 +223,7 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     protected _pinnedStartColumns: IgxColumnComponent[] = [];
     protected _pinnedEndColumns: IgxColumnComponent[] = [];
     protected _unpinnedColumns: IgxColumnComponent[] = [];
+    protected _pinnedRows: number[] = [];
     protected _filteringLogic = FilteringLogic.And;
     protected _filteringExpressions = [];
     protected _sortingExpressions = [];
@@ -361,12 +369,26 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         return this._unpinnedColumns.filter((col) => !col.hidden).sort((col1, col2) => col1.index - col2.index);
     }
 
+    get pinnedRowsIndexes(): any[] {
+        return this._pinnedRows;
+    }
+
     public getColumnByName(name: string): IgxColumnComponent {
         return this.columnList.find((col) => col.field === name);
     }
 
     public getRowByIndex(index: number): IgxGridRowComponent {
-        return this.rowList.toArray()[index];
+        if (index + this._pinnedRows.length >= this.rowList.length) {
+            return null;
+        }
+        return this.rowList.toArray()[index + this._pinnedRows.length];
+    }
+
+    public getPinnedRowByIndex(index: number): IgxGridRowComponent {
+        if (index >= this.pinnedRowList.length) {
+            return null;
+        }
+        return this.pinnedRowList.toArray()[index];
     }
 
     get visibleColumns(): IgxColumnComponent[] {
@@ -541,6 +563,31 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
             this._pinnedStartColumns.splice(this._pinnedStartColumns.indexOf(col), 1);
         }
         this.markForCheck();
+    }
+
+    public pinRow(row: IgxGridRowComponent) {
+        if (this.rowList.length - this._pinnedRows.length <= 1) {
+            return false;
+        }
+
+        this._pinnedRows.push(this.data.indexOf(row.rowData));
+        this.pinnedRowsHeight += this.rowHeight;
+        this.calcHeight -= this.rowHeight;
+        this._pipeTrigger++;
+        this.markForCheck();
+        return true;
+    }
+
+    public unpinRow(row: IgxGridRowComponent) {
+        if (this._pinnedRows.length) {
+            this._pinnedRows.splice(row.index, 1);
+            this.calcHeight += this.rowHeight;
+            this.pinnedRowsHeight -= this.rowHeight;
+            this._pipeTrigger++;
+            this.markForCheck();
+            return true;
+        }
+        return false;
     }
 
     get hasSortableColumns(): boolean {

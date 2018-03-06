@@ -83,3 +83,24 @@ export class IgxGridFilterConditionPipe implements PipeTransform {
         return value.split(/(?=[A-Z])/).join(" ");
     }
 }
+
+@Pipe({
+    name: "gridRowPinning",
+    pure: true
+})
+export class IgxGridRowPinningPipe implements PipeTransform {
+
+    constructor(private gridAPI: IgxGridAPIService) {}
+
+    public transform(collection: any[], type: string, id: string, pipeTrigger: number) {
+        const pinnedRows = this.gridAPI.get(id).pinnedRowsIndexes;
+
+        return collection.filter((value, index) => {
+            if (type === "pinned") {
+                return pinnedRows.indexOf(index) !== -1;
+            } else {
+                return pinnedRows.indexOf(index) === -1;
+            }
+        });
+    }
+}

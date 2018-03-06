@@ -72,11 +72,18 @@ export class GridColumnPinningSampleComponent {
 		} else {
 			col.pin(PinLocation.End);
 		}
-	}
+    }
+    
+    pinRow() {
+        this.grid1.pinRow(this.grid1.getRowByIndex(0));
+    }
+
+    unpinRow() {
+        this.grid1.unpinRow(this.grid1.getPinnedRowByIndex(0));
+    }
 
 	toggleVisibility(name: string){
 		var col = this.grid1.getColumnByName(name);
 		col.hidden = !col.hidden;
 	}
-
 }

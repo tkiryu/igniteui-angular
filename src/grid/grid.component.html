@@ -35,8 +35,19 @@
     </div>
 </div>
 
-<div class="igx-grid__tbody" role="rowgroup" [style.height.px]='calcHeight' [style.width.px]='calcWidth'>
-    <ng-template igxFor let-rowData [igxForOf]="data | gridFiltering:filteringExpressions:filteringLogic:id:pipeTrigger
+<div class="igx-grid__tbody" role="rowgroup" [style.height.px]='calcHeight + pinnedRowsHeight' [style.width.px]='calcWidth'>
+    <div *ngIf="pinnedRowsIndexes.length > 0" [style.height.px]="pinnedRowsHeight" [style.width]="'100%'" [style.borderBottom]="'1px solid #666'" 
+        [style.overflow]="'hidden'" [style.paddingRight.px]="18" #theadPinnedTop>
+        <ng-template igxFor let-pinnedRowData [igxForOf]="data | gridRowPinning:'pinned':id:pipeTrigger" let-rowIndex="index" let-dirty="dirty"
+                    [igxForScrollOrientation]="'vertical'"
+                    [igxForItemSize]="rowHeight">
+            <igx-grid-row [gridID]="id" [index]="rowIndex" [rowData]="pinnedRowData" [isDirty]="dirty" [style.minHeight.px]="rowHeight">
+            </igx-grid-row>
+        </ng-template>
+    </div>
+    <div [style.height.px]='calcHeight' [style.width.px]='calcWidth'>
+        <ng-template igxFor let-rowData [igxForOf]="data | gridRowPinning:'unpinned':id:pipeTrigger
+                                | gridFiltering:filteringExpressions:filteringLogic:id:pipeTrigger
                                 | gridSort:sortingExpressions:id:pipeTrigger
                                 | gridPaging:page:perPage:id:pipeTrigger" let-rowIndex="index"
                                 [igxForScrollOrientation]="'vertical'"
@@ -45,9 +56,10 @@
                                  let-dirty="dirty"
                                  #verticalScrollContainer
                                >
-           <igx-grid-row [gridID]="id" [index]="rowIndex" [rowData]="rowData" [isDirty]="dirty">
+           <igx-grid-row [gridID]="id" [index]="rowIndex + pinnedRowsIndexes.length" [rowData]="rowData" [isDirty]="dirty" [style.minHeight.px]="rowHeight">
            </igx-grid-row>
         </ng-template>
+    </div>
 </div>
 <div [style.width]='width' [style.height]="'17px'" #scr>
 	<div [style.width.px]='startPinnedWidth' style='float:left;height: 100%;'></div>

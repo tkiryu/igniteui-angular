@@ -1,4 +1,4 @@
-<igx-grid #grid1 [data]="data" [width]="'1200px'" [height]="'800px'">
+﻿<igx-grid #grid1 [data]="data" [width]="'1200px'" [height]="'800px'">
     <igx-column  *ngFor="let c of columns" [sortable]="true" [field]="c.field" [header]="c.field" [width]="c.width" [pinned]='c.pinned' [pinLocation]='c.pinLocation' [hidden]='c.hidden'>
     </igx-column>
 </igx-grid>
@@ -8,3 +8,6 @@
 <button igxButton="raised" (click)="toggleVisibility('ID')">Toggle Visibility 'ID' column</button>
 <button igxButton="raised" (click)="toggleVisibility('ContactName')">Toggle Visibility 'ContactName' column</button>
 <button igxButton="raised" (click)="toggleVisibility('ContactTitle')">Toggle Visibility 'ContactTitle' column</button>
+<br/>
+<button igxButton="raised" (click)="pinRow()">Pin row</button>
+<button igxButton="raised" (click)="unpinRow()">Unpin row</button>
