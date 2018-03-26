@@ -61,10 +61,30 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
     private hvh: ComponentRef<HVirtualHelperComponent>;
     private _differ: IterableDiffer<T> | null = null;
     private _trackByFn: TrackByFunction<T>;
+
+    /** Last recorded touch position used to determine how much we have moved while performing touch action */
     private _lastTouchX = 0;
+
+    /** Last recorded touch position used to determine how much we have moved while performing touch action */
     private _lastTouchY = 0;
+
+    /** Last event Pointer ID recorded that is performing gesture interactions */
     private _pointerCapture;
+
+    /** Gesture object used to detect gestures on IE11 and Edge browsers */
     private _gestureObject;
+
+    /** Last recorded scroll right position used to determine how much we have scrolled. Used only by the vertical directive */
+    private lastScrollTop = 0;
+
+    /** Last recorded scroll left position used to determine how much we have scrolled. Used only by the horizontal directive */
+    private lastScrollLeft = 0;
+
+    /** Accumulated scroll top by which we determine if we need to render new rows. Used only by the vertical directive */
+    private accScrollTop = 0;
+
+    /** Accumulated scroll left by which we determine if need to delete cols or add new cols. Used only by the horizontal directive */
+    private accScrollLeft = 0;
 
     @ViewChild(DisplayContainerComponent)
     private displayContiner: DisplayContainerComponent;
@@ -133,7 +153,6 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
 
         if (this.igxForScrollOrientation === "horizontal") {
             this.dc.instance._viewContainer.element.nativeElement.style.height = "100%";
-            this.dc.instance._viewContainer.element.nativeElement.style.left = "0px";
             this.func = (evt) => { this.onHScroll(evt); };
             if (!this.hScroll) {
                 const hvFactory: ComponentFactory<HVirtualHelperComponent> =
@@ -149,6 +168,10 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
                     this.hScroll.addEventListener("scroll", this.func);
                 });
             }
+
+            this.lastScrollLeft = this.hScroll.scrollLeft;
+            this.accScrollLeft = this.hScroll.scrollLeft - this.hCache[this.state.startIndex];
+            this.dc.instance._viewContainer.element.nativeElement.style.left = -this.accScrollLeft + "px";
         }
     }
     public ngOnDestroy() {
@@ -227,14 +250,53 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
             return;
         }
         const curScrollTop = event.target.scrollTop;
+        const vDir = Math.sign(curScrollTop - this.lastScrollTop);
 
-        const scrollOffset = this.fixedUpdateAllRows(curScrollTop, event.target.children[0].scrollHeight);
-        this.dc.instance._viewContainer.element.nativeElement.style.top = -scrollOffset + "px";
+        if (curScrollTop !== this.lastScrollTop &&
+                (this.igxForOf.length) * this.igxForItemSize > parseInt(this.igxForContainerSize, 10)) {
+            let numToRender = 0;
 
+            this.accScrollTop += curScrollTop - this.lastScrollTop;
+            numToRender = Math.floor(Math.abs(this.accScrollTop) / this.igxForItemSize);
+            if (numToRender >= 1) {
+                this.accScrollTop = this.accScrollTop % this.igxForItemSize;
+
+                if (Math.abs(curScrollTop - this.lastScrollTop) < parseInt(this.igxForContainerSize, 10)) {
+                    this.dc.instance._viewContainer.element.nativeElement.style.top = Math.sign(vDir) * (-this.accScrollTop) + "px";
+
+                    for (let i = 0 ; i < numToRender; i ++) {
+                        if (vDir >= 0) {
+                            this.removeFirstElem();
+                            this.addLastElem();
+                        } else {
+                            this.removeLastElem();
+                            this.addFirstElem();
+                        }
+                    }
+                } else {
+                    this.accScrollTop = this.fixedUpdateAllRows(curScrollTop, event.target.children[0].scrollHeight);
+                    this.dc.instance._viewContainer.element.nativeElement.style.top = -(this.accScrollTop) + "px";
+                }
+            } else {
+                const newTop = parseInt(this.dc.instance._viewContainer.element.nativeElement.style.top, 10) -
+                                (curScrollTop - this.lastScrollTop);
+                this.dc.instance._viewContainer.element.nativeElement.style.top = newTop + "px";
+            }
+        }
+
+        this.lastScrollTop = curScrollTop;
         this.dc.changeDetectorRef.detectChanges();
         this.onChunkLoad.emit(this.state);
     }
 
+    /**
+     * Update all rows with the new calculated chunk data and return the offset that should be of the top row
+     * This is a fixed method of updating only the content of the embeded views
+     *
+     * @param inScrollTop Vertical scroll position by which the new chunk is calculated
+     * @param scrollHeight How much the container that is used can be scrolled
+     * @returns How many pixels of the first row should be scrolled up and not visible
+     */
     protected fixedUpdateAllRows(inScrollTop: number, scrollHeight: number): number {
         const ratio = scrollHeight !== 0 ? inScrollTop / scrollHeight : 0;
         const embeddedViewCopy = Object.assign([], this._embeddedViews);
@@ -268,12 +330,117 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         if (!parseInt(this.hScroll.children[0].style.width, 10)) {
             return;
         }
+        const curStartIndex = this.state.startIndex;
+        const curEndIndex = this.state.startIndex + this.state.chunkSize - 1;
         const curScrollLeft = event.target.scrollLeft;
+        const hDir = Math.sign(curScrollLeft - this.lastScrollLeft);
 
         // Updating horizontal chunks
-        const scrollOffset = this.fixUpdateAllCols(curScrollLeft);
-        this.dc.instance._viewContainer.element.nativeElement.style.left = -scrollOffset + "px";
+        if (curScrollLeft !== this.lastScrollLeft) {
+            let virtScrollLeft = parseInt(this.dc.instance._viewContainer.element.nativeElement.style.left, 10);
+            let renderedWidth = 0;
 
+            this.accScrollLeft += curScrollLeft - this.lastScrollLeft;
+
+            if (Math.abs(curScrollLeft - this.lastScrollLeft) <= parseInt(this.igxForContainerSize, 10)) {
+                const newLeft = parseInt(this.dc.instance._viewContainer.element.nativeElement.style.left, 10) -
+                                (curScrollLeft - this.lastScrollLeft);
+                this.dc.instance._viewContainer.element.nativeElement.style.left =  newLeft + "px";
+                virtScrollLeft = newLeft;
+
+                for (let i = curStartIndex; i <= curEndIndex; i++) {
+                    renderedWidth +=  parseInt(this.igxForOf[i].width, 10);
+                }
+
+                if (hDir >= 0) {
+                    let widthToRemove = 0;
+                    let widthRemoved = 0;
+                    let numRemoved = 0;
+                    let widthToRender = 0;
+                    let widthRendered = 0;
+
+                    // Remove cols out of view on the left
+                    widthToRemove = Math.abs(virtScrollLeft);
+                    for (let i = curStartIndex; i <= curEndIndex; i++) {
+                        const colWidth = parseInt(this.igxForOf[i].width, 10);
+
+                        widthRemoved += colWidth;
+                        if (widthRemoved < Math.abs(virtScrollLeft)) {
+                            this.removeFirstElem();
+                            numRemoved++;
+                            renderedWidth -= colWidth;
+                        } else {
+                            widthRemoved -= colWidth;
+                            break;
+                        }
+                    }
+
+                    // Render needed cols
+                    widthToRender = parseInt(this.igxForContainerSize, 10) * 1.2 - (renderedWidth - this.accScrollLeft);
+                    if (widthToRender) {
+                        for (let i = curEndIndex + 1; i < this.igxForOf.length; i++) {
+                            if (widthRendered >= widthToRender) {
+                                break;
+                            } else {
+                                this.addLastElem();
+                                widthRendered += parseInt(this.igxForOf[i].width, 10);
+                            }
+                        }
+                    }
+
+                    if (numRemoved) {
+                        this.accScrollLeft -= widthRemoved;
+                        this.dc.instance._viewContainer.element.nativeElement.style.left =  (-this.accScrollLeft) + "px";
+                    }
+                } else {
+                    let widthToRemove;
+                    let widthRemoved = 0;
+                    let widthToRender = 0;
+                    let widthRendered = 0;
+                    let numRendered = 0;
+
+                    // Remove cols out of view on the right
+                    widthToRemove = renderedWidth - (parseInt(this.igxForContainerSize, 10) - virtScrollLeft);
+                    for (let i = curEndIndex; i >= curStartIndex; i--) {
+                        const colWidth = parseInt(this.igxForOf[i].width, 10);
+
+                        widthRemoved += colWidth;
+                        if (widthRemoved < widthToRemove) {
+                            this.removeLastElem();
+                            renderedWidth -= colWidth;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Render needed cols
+                    widthToRender = parseInt(this.igxForContainerSize, 10) * 1.2 -
+                                    (parseInt(this.igxForContainerSize, 10) - virtScrollLeft);
+                    if (widthToRender > 0) {
+                        for (let i = curStartIndex - 1; i >= 0; i--) {
+                            if (widthRendered >= widthToRender || widthToRender < 0) {
+                                break;
+                            } else {
+                                this.addFirstElem();
+                                widthRendered += parseInt(this.igxForOf[i].width, 10);
+                                numRendered++;
+                            }
+                        }
+                    }
+
+                    if (numRendered) {
+                        this.accScrollLeft = widthRendered - virtScrollLeft;
+                        this.dc.instance._viewContainer.element.nativeElement.style.left =  (-this.accScrollLeft) + "px";
+                    }
+                }
+            } else {
+                this.accScrollLeft = this.fixUpdateAllCols(curScrollLeft);
+                this.dc.instance._viewContainer.element.nativeElement.style.left = -this.accScrollLeft + "px";
+            }
+        }
+
+        // Cache data for the next scroll
+        this.lastScrollLeft = curScrollLeft;
         this.dc.changeDetectorRef.detectChanges();
         this.onChunkLoad.emit();
     }
@@ -320,6 +487,7 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         }
     }
 
+    /** Function that is called the first moment we start interacting with the content on a touch device */
     protected onTouchStart(event) {
         /** runs only on the vertical directive */
         if (typeof MSGesture === "function") {
@@ -329,6 +497,7 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         this._lastTouchY = event.changedTouches[0].screenY;
     }
 
+    /** Function that is called when we need to scroll the content based on touch interactions */
     protected onTouchMove(event) {
         /** runs only on the vertical directive */
         if (typeof MSGesture === "function") {
@@ -354,6 +523,7 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         this._lastTouchY = event.changedTouches[0].screenY;
     }
 
+    /** Function that is called when we need to detect touch starting on a touch device on IE/Edge */
     protected onPointerDown(event) {
         /** runs only on the vertical directive */
         if (!event || (event.pointerType !== 2 && event.pointerType !== "touch") ||
@@ -370,6 +540,7 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         this._gestureObject.addPointer(this._pointerCapture);
     }
 
+    /** Function that is called when we need to detect touch ending on a touch device on IE/Edge */
     protected onPointerUp(event) {
         /** runs only on the vertical directive */
         if (!this._pointerCapture) {
@@ -514,6 +685,7 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         this._recalcScrollBarSize();
     }
 
+    /** Remove the last column/row from left to right */
     protected removeLastElem() {
         const oldElem = this._embeddedViews.pop();
         oldElem.destroy();
@@ -521,6 +693,16 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         this.state.chunkSize--;
     }
 
+    /** Remove the first column/row from left to right */
+    protected removeFirstElem() {
+        const oldElem = this._embeddedViews.shift();
+        oldElem.destroy();
+
+        this.state.startIndex++;
+        this.state.chunkSize--;
+    }
+
+    /** Add new column/row on right/bottom as a last element */
     protected addLastElem() {
         const elemIndex = this.state.startIndex + this.state.chunkSize;
         if (elemIndex >= this.igxForOf.length) {
@@ -534,6 +716,21 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         );
 
         this._embeddedViews.push(embeddedView);
+        this.state.chunkSize++;
+    }
+
+    /** Add new column/row on left/top as a first element */
+    protected addFirstElem() {
+        const elemIndex = this.state.startIndex - 1;
+        const input = this.igxForOf[elemIndex];
+        const embeddedView = this.dc.instance._vcr.createEmbeddedView(
+            this._template,
+            { $implicit: input, index: elemIndex },
+            0
+        );
+
+        this._embeddedViews.unshift(embeddedView);
+        this.state.startIndex = elemIndex;
         this.state.chunkSize++;
     }
 
