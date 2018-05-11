@@ -1,6 +1,7 @@
 import { Component, Injectable, ViewChild } from "@angular/core";
 import { Http } from "@angular/http";
 import { BehaviorSubject, Observable } from "rxjs/Rx";
+// import { IgxColumnHidingComponent } from "../../lib/grid/column-hiding.component";
 import { IgxColumnComponent } from "../../lib/grid/column.component";
 import { IgxGridComponent } from "../../lib/grid/grid.component";
 import {
@@ -22,8 +23,8 @@ import {
     IgxCsvExporterOptions,
     IgxCsvExporterService,
     IgxExcelExporterOptions,
-    IgxExporterOptionsBase,
-    IgxExcelExporterService
+    IgxExcelExporterService,
+    IgxExporterOptionsBase
 } from "../../lib/services/index";
 
 @Injectable()
