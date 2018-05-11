@@ -67,6 +67,18 @@ export class IgxColumnComponent implements AfterContentInit {
     }
 
     @Input()
+    get allowHiding(): boolean {
+        return this._allowHiding;
+    }
+
+    set allowHiding(value: boolean) {
+        if (this._allowHiding !== value) {
+            this._allowHiding = value;
+            this.check();
+        }
+    }
+
+    @Input()
     public movable = false;
 
     @Input()
@@ -179,6 +191,7 @@ export class IgxColumnComponent implements AfterContentInit {
     protected _summaries = null;
     protected _hidden = false;
     protected _index: number;
+    protected _allowHiding = true;
 
     @ContentChild(IgxCellTemplateDirective, { read: IgxCellTemplateDirective })
     protected cellTemplate: IgxCellTemplateDirective;

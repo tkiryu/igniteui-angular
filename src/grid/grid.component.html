@@ -20,6 +20,18 @@
 </ng-template>
 
 <div class="igx-grid__thead" role="rowgroup" [style.width.px]='calcWidth' #theadRow>
+    <div *ngIf="columnHiding">
+        <button name="btnColumnChooser" *ngIf="columnChooser && columnChooser.toggleDirective"
+                igxButton igxRipple [igxToggleAction]="columnChooser.toggleDirective">
+            <span>
+                <igx-icon *ngIf="hiddenColumnsCount > 0">visibility_off</igx-icon>
+                <igx-icon *ngIf="hiddenColumnsCount === 0">visibility</igx-icon>
+                {{ hiddenColumnsCount }} hidden column(s)
+            </span>
+        </button>
+        <igx-column-hiding #columnHidingUI [columns]="columnList" [title]="columnHidingTitle"
+            (onColumnVisibilityChanged)="toggleColumnVisibility($event)" columnDisplayOrder="Alphabetical"></igx-column-hiding>
+    </div>
     <div class="igx-grid__tr" role="row" style="width: calc(100% - 18px)">
         <ng-container *ngIf="pinnedColumns.length > 0">
             <igx-grid-header [gridID]="id" *ngFor="let col of pinnedColumns" [column]="col" [style.min-width.px]="col.width"></igx-grid-header>

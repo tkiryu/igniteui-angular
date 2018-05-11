@@ -37,6 +37,8 @@ import { ISortingExpression, SortingDirection } from "../data-operations/sorting
 import { IgxForOfDirective } from "../directives/for-of/for_of.directive";
 import { IgxGridAPIService } from "./api.service";
 import { IgxGridCellComponent } from "./cell.component";
+import { IColumnVisibilityChangedEventArgs } from "./column-hiding-item.component";
+import { IgxColumnHidingComponent } from "./column-hiding.component";
 import { IgxColumnComponent } from "./column.component";
 import { ISummaryExpression } from "./grid-summary";
 import { IgxGridRowComponent } from "./row.component";
@@ -157,6 +159,16 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     @Input()
     public paginationTemplate: TemplateRef<any>;
 
+    @Input()
+    get columnHiding() {
+        return this._columnHiding;
+    }
+
+    set columnHiding(value) {
+        this._columnHiding = value;
+        this.cdr.markForCheck();
+    }
+
     @HostBinding("style.height")
     @Input()
     public height;
@@ -221,6 +233,9 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     @Output()
     public onRowDeleted = new EventEmitter<IRowDataEventArgs>();
 
+    @Output()
+    public onColumnVisibilityChanged = new EventEmitter<IColumnVisibilityChangedEventArgs>();
+
     @ContentChildren(IgxColumnComponent, { read: IgxColumnComponent })
     public columnList: QueryList<IgxColumnComponent>;
 
@@ -248,6 +263,9 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     @ViewChild("tfoot")
     public tfoot: ElementRef;
 
+    @ViewChild("columnHidingUI")
+    public columnHidingUI: IgxColumnHidingComponent;
+
     @HostBinding("attr.tabindex")
     public tabindex = 0;
 
@@ -271,6 +289,7 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         this.cdr.markForCheck();
     }
 
+    public columnHidingTitle = "Column Hiding UI";
     public pagingState;
     public calcWidth: number;
     public calcHeight: number;
@@ -290,6 +309,7 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     protected _filteringLogic = FilteringLogic.And;
     protected _filteringExpressions = [];
     protected _sortingExpressions = [];
+    protected _columnHiding = false;
     private resizeHandler;
     private columnListDiffer;
 
@@ -356,6 +376,7 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         this.calculateGridSizes();
         this.setEventBusSubscription();
         this.setVerticalScrollSubscription();
+
         this.cdr.detectChanges();
     }
 
@@ -363,6 +384,20 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         this.zone.runOutsideAngular(() => this.document.defaultView.removeEventListener("resize", this.resizeHandler));
         this.destroy$.next(true);
         this.destroy$.complete();
+    }
+
+    public showcolumnHidingUI() {
+        if (this.columnHidingUI) {
+            this.columnHidingUI.toggleDirective.open(true);
+            this.columnHidingUI.dialogShowing = true;
+        }
+    }
+
+    public hidecolumnHidingUI() {
+        if (this.columnHidingUI) {
+            this.columnHidingUI.toggleDirective.close(true);
+            this.columnHidingUI.dialogShowing = false;
+        }
     }
 
     get nativeElement() {
@@ -428,6 +463,10 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
 
     get isLastPage(): boolean {
         return this.page + 1 >= this.totalPages;
+    }
+
+    get hiddenColumnsCount() {
+        return this.columnList.filter((col) => col.hidden === true).length;
     }
 
     public nextPage(): void {
@@ -598,6 +637,14 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         if (this._pinnedColumns.indexOf(col) !== -1) {
             this._pinnedColumns.splice(this._pinnedColumns.indexOf(col), 1);
         }
+        this.markForCheck();
+    }
+
+    public toggleColumnVisibility(args: IColumnVisibilityChangedEventArgs) {
+        const col = this.getColumnByName(args.column.field);
+        col.hidden = args.newValue;
+        this.onColumnVisibilityChanged.emit(args);
+
         this.markForCheck();
     }
 
