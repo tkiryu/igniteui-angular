@@ -24,12 +24,12 @@ import { FilteringCondition } from "../data-operations/filtering-condition";
 import { filteringStateDefaults } from "../data-operations/filtering-state.interface";
 import { IgxButtonModule } from "../directives/button/button.directive";
 import { IgxToggleDirective, IgxToggleModule } from "../directives/toggle/toggle.directive";
-import { IColumnVisibilityChangedEventArgs, IgxColumnHidingItemComponent } from "./column-hiding-item.component";
+import { IColumnVisibilityChangedEventArgs, IgxColumnHidingItemDirective } from "./column-hiding-item.component";
 import { IgxColumnComponent } from "./column.component";
 
 export enum ColumnDisplayOrder {
     Alphabetical,
-    SameAsGrid
+    DisplayOrder
 }
 
 @Component({
@@ -100,27 +100,27 @@ export class IgxColumnHidingComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     @Input()
-    public get canHideAll(): boolean {
+    public get disableHideAll(): boolean {
         if (!this._currentColumns || this._currentColumns.length < 1 ||
                 this._hiddenColumnsCount === this.columns.length) {
-            return false;
+            return true;
         } else if (this.hidableColumns.length < 1 ||
                 this.hidableColumns.length === this.hidableColumns.filter((col) => col.value).length) {
-            return false;
-        } else {
             return true;
+        } else {
+            return false;
         }
     }
 
     @Input()
-    public get canShowAll(): boolean {
+    public get disableShowAll(): boolean {
         if (!this._currentColumns || this._currentColumns.length < 1 ||
             this._hiddenColumnsCount < 1 || this.hidableColumns.length < 1) {
-            return false;
-        } else if (this.hidableColumns.length === this.hidableColumns.filter((col) => !col.value).length) {
-            return false;
-        } else {
             return true;
+        } else if (this.hidableColumns.length === this.hidableColumns.filter((col) => !col.value).length) {
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -135,16 +135,6 @@ export class IgxColumnHidingComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     @Input()
-    get enableFilter() {
-        return this._enableFilter;
-    }
-
-    set enableFilter(value) {
-        this._enableFilter = value;
-        this.cdr.markForCheck();
-    }
-
-    @Input()
     public get columnDisplayOrder() {
         return this._columnDisplayOrder;
     }
@@ -154,11 +144,17 @@ export class IgxColumnHidingComponent implements OnInit, AfterViewInit, OnDestro
         this.cdr.markForCheck();
     }
 
+    @Input()
+    public showAllText = "Show All";
+
+    @Input()
+    public hideAllText = "Hide All";
+
     @Output()
     public onColumnVisibilityChanged = new EventEmitter<IColumnVisibilityChangedEventArgs>();
 
     @ViewChild(IgxToggleDirective)
-    public toggleDirective: IgxToggleDirective;
+    public toggle: IgxToggleDirective;
 
     @ViewChild("columnChooserToggle", { read: TemplateRef })
     protected columnChooserToggle: TemplateRef<any>;
@@ -166,22 +162,15 @@ export class IgxColumnHidingComponent implements OnInit, AfterViewInit, OnDestro
     @ViewChild("columnChooserInline", { read: TemplateRef })
     protected columnChooserInline: TemplateRef<any>;
 
-    @ViewChild("buttonShowAll", { read: ElementRef })
-    public buttonShowAll: ElementRef;
-
-    @ViewChild("buttonHideAll", { read: ElementRef })
-    public buttonHideAll: ElementRef;
-
-    private _currentColumns: IgxColumnHidingItemComponent[] = [];
+    private _currentColumns = [];
     private _gridColumns: QueryList<IgxColumnComponent> = new QueryList<IgxColumnComponent>();
     private _togglable = true;
-    private _enableFilter = true;
     private _filterCriteria = "";
-    private _filterColumnsPrompt = "Filter columns list ...";
+    private _filterColumnsPrompt = "Filter columns list ..."; // no default value
     private _showHiddenColumnsOnly = false;
     private _hiddenColumnsCount = 0;
-    private _title = "Column Hiding UI";
-    private _columnDisplayOrder: ColumnDisplayOrder = ColumnDisplayOrder.SameAsGrid;
+    private _title = "Column Hiding UI"; // no default value
+    private _columnDisplayOrder = ColumnDisplayOrder.DisplayOrder;
 
     public dialogShowing = false;
     public dialogPosition = "igx-filtering__options--to-right";
@@ -204,7 +193,7 @@ export class IgxColumnHidingComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     private get hidableColumns() {
-        return this._currentColumns.filter((col) => col.allowHiding);
+        return this._currentColumns.filter((col) => !col.disableHiding);
     }
 
     private createColumnItems() {
@@ -212,7 +201,9 @@ export class IgxColumnHidingComponent implements OnInit, AfterViewInit, OnDestro
             this._currentColumns = [];
             this._hiddenColumnsCount = this._gridColumns.filter((col) => col.hidden).length;
             this._gridColumns.forEach((column) => {
-                this._currentColumns.push(new IgxColumnHidingItemComponent(this, column));
+                const item = new IgxColumnHidingItemDirective(this);
+                item.column = column;
+                this._currentColumns.push(item);
             });
 
             for (const item of this._currentColumns) {
@@ -282,7 +273,7 @@ export class IgxColumnHidingComponent implements OnInit, AfterViewInit, OnDestro
 }
 
 @NgModule({
-declarations: [ IgxColumnHidingComponent, IgxColumnHidingItemComponent ],
+declarations: [ IgxColumnHidingComponent, IgxColumnHidingItemDirective ],
 exports: [IgxColumnHidingComponent],
 imports: [
     IgxButtonModule,

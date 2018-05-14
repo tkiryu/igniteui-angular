@@ -305,9 +305,7 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     public onRowDeleted = new EventEmitter<IRowDataEventArgs>();
 
     @Output()
-<<<<<<< HEAD
     public onColumnVisibilityChanged = new EventEmitter<IColumnVisibilityChangedEventArgs>();
-=======
     public onDataPreLoad = new EventEmitter<any>();
 
     @Output()
@@ -315,7 +313,6 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
 
     @Output()
     public onContextMenu = new EventEmitter<IGridCellEventArgs>();
->>>>>>> 02a4d15dae5fe18b89b3e378dece9d145eb41d25
 
     @ContentChildren(IgxColumnComponent, { read: IgxColumnComponent })
     public columnList: QueryList<IgxColumnComponent>;
@@ -356,8 +353,8 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     @ViewChild("tfoot")
     public tfoot: ElementRef;
 
-    @ViewChild("columnHidingUI")
-    public columnHidingUI: IgxColumnHidingComponent;
+    @ViewChild("toolbarHidingUI")
+    public toolbarHidingUI: IgxColumnHidingComponent;
 
     @HostBinding("attr.tabindex")
     public tabindex = 0;
@@ -382,9 +379,7 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         this.cdr.markForCheck();
     }
 
-<<<<<<< HEAD
-    public columnHidingTitle = "Column Hiding UI";
-=======
+    public columnHidingTitle = "Column Hiding UI"; // no defaults
     get virtualizationState() {
         return this.verticalScrollContainer.state;
     }
@@ -400,7 +395,6 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         this.cdr.detectChanges();
     }
 
->>>>>>> 02a4d15dae5fe18b89b3e378dece9d145eb41d25
     public pagingState;
     public calcWidth: number;
     public calcRowCheckboxWidth: number;
@@ -426,11 +420,8 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     protected _filteringLogic = FilteringLogic.And;
     protected _filteringExpressions = [];
     protected _sortingExpressions = [];
-<<<<<<< HEAD
     protected _columnHiding = false;
-=======
     private _filteredData = null;
->>>>>>> 02a4d15dae5fe18b89b3e378dece9d145eb41d25
     private resizeHandler;
     private columnListDiffer;
     private _height = "100%";
@@ -524,17 +515,17 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         this.destroy$.complete();
     }
 
-    public showcolumnHidingUI() {
-        if (this.columnHidingUI) {
-            this.columnHidingUI.toggleDirective.open(true);
-            this.columnHidingUI.dialogShowing = true;
+    public showColumnHidingUI() {
+        if (this.toolbarHidingUI) {
+            this.toolbarHidingUI.toggle.open(true);
+            this.toolbarHidingUI.dialogShowing = true;
         }
     }
 
-    public hidecolumnHidingUI() {
-        if (this.columnHidingUI) {
-            this.columnHidingUI.toggleDirective.close(true);
-            this.columnHidingUI.dialogShowing = false;
+    public hideColumnHidingUI() {
+        if (this.toolbarHidingUI) {
+            this.toolbarHidingUI.toggle.close(true);
+            this.toolbarHidingUI.dialogShowing = false;
         }
     }
 

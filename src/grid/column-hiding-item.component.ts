@@ -1,63 +1,8 @@
 import { AfterContentInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter,
-  forwardRef, Inject, Input, OnInit, Output } from "@angular/core";
+  forwardRef, Inject, Input, OnInit, Output, Directive } from "@angular/core";
 import { IgxColumnHidingComponent } from "./column-hiding.component";
 import { IgxColumnComponent } from "./column.component";
-
-// @Component({
-//   changeDetection: ChangeDetectionStrategy.OnPush,
-//   selector: "igx-column-chooser-item",
-//   templateUrl: "./column-chooser-item.component.html",
-// //   styleUrls: ["column-chooser-item.component.css"],
-//   providers: [ IgxColumnComponent ]
-// })
-// export class ColumnChooserItemComponent implements AfterContentInit {
-//   private _column: IgxColumnComponent;
-//   private _isHidden = false;
-//   private _allowHiding = true;
-//   // private _columnGroup;
-//   // private _isColumnGroup;
-//   // private _isParentGroupHidden = false;
-
-//   constructor(
-//     @Inject(forwardRef(() => IgxColumnHidingComponent))
-//     public columnChooser: IgxColumnHidingComponent,
-//     column: IgxColumnComponent,
-//     private cdr: ChangeDetectorRef) {
-//       this._column = column;
-//       // this._isHidden = column.hidden ? column.hidden : false;
-//       // this._allowHiding = column.allowHiding;
-//   }
-
-//   get isHidden() {
-//     return this._isHidden;
-//   }
-
-//   @Input()
-//   set isHidden(value) {
-//     this.onColumnVisibilityChanged(value);
-//   }
-
-//   @Output()
-//   public onVisibilityChanged = new EventEmitter<IColumnVisibilityChangedEventArgs>();
-
-//   ngAfterContentInit() {
-//     this.cdr.markForCheck();
-//   }
-//   get name() {
-//     return (this._column.header) ? this._column.header : this._column.field;
-//   }
-
-//   get allowHiding() {
-//     return this._column.allowHiding;
-//   }
-
-//   public onColumnVisibilityChanged(value) {
-//     if (value !== this._column.hidden) {
-//       this._isHidden = value;
-//       this.onVisibilityChanged.emit({ column: this._column, newValue: this._isHidden });
-//     }
-//   }
-// }
+import { Direction } from "../main";
 
 export interface IValueChangedEventArgs {
   oldValue: any;
@@ -65,7 +10,10 @@ export interface IValueChangedEventArgs {
 }
 
 export abstract class ItemPropertyValueChanged {
-  constructor(private object: any, private propName: string) {
+  @Input()
+  public object: any;
+
+  constructor(private propName: string) {
   }
 
   get value() {
@@ -90,43 +38,52 @@ export abstract class ItemPropertyValueChanged {
 }
 
 export class ColumnItemComponentBase extends ItemPropertyValueChanged {
+
+  @Input()
+  public column: any;
+
   protected _column: IgxColumnComponent;
 
-  constructor(column: IgxColumnComponent, propName: string) {
-    super(column, propName);
-    this._column = column;
+  constructor(propName: string) {
+    super(propName);
+    this._column = this.object;
   }
 
   get name() {
-    return (this._column.header) ? this._column.header : this._column.field;
+    return (this._column) ? ((this._column.header) ? this._column.header : this._column.field) : "";
   }
 }
 
-export interface IColumnVisibilityChangedEventArgs {
-  column: IgxColumnComponent;
+export interface IColumnVisibilityChangedEventArgs { // check output namings
+  column: any;
   newValue: boolean;
 }
 
-@Component({
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  selector: "igx-column-hiding-item",
-  templateUrl: "./column-hiding-item.component.html",
-//   styleUrls: ["column-hiding-item.component.css"],
-  providers: [ IgxColumnComponent ]
+// @Component({
+//   changeDetection: ChangeDetectionStrategy.OnPush,
+//   selector: "igx-column-hiding-item",
+//   templateUrl: "./column-hiding-item.component.html"
+// //   styleUrls: ["column-hiding-item.component.css"]
+// })
+// export class IgxColumnHidingItemComponent extends ColumnItemComponentBase {
+@Directive({
+    selector: "[igxColumnHidingItem]"
 })
-export class IgxColumnHidingItemComponent extends ColumnItemComponentBase {
+export class IgxColumnHidingItemDirective extends ColumnItemComponentBase {
+  @Input()
+  public column: any;
 
   @Output()
   onVisibilityChanged = new EventEmitter<IColumnVisibilityChangedEventArgs>();
 
   constructor(
     @Inject(forwardRef(() => IgxColumnHidingComponent))
-    public columnChooser: IgxColumnHidingComponent,
-    public column: IgxColumnComponent) {
-      super(column, "hidden");
+    public columnChooser: IgxColumnHidingComponent) {
+      super("hidden");
+      this._column = this.column;
   }
 
-  get allowHiding() {
-    return this.column.allowHiding;
+  get disableHiding() {
+    return this.column.disableHiding;
   }
 }
