@@ -56,11 +56,20 @@ export class IgxScrollInertiaDirective implements OnInit {
     private _nextX;
     private _nextY;
 
+    private requestId;
+
     ngOnInit(): void {
         this._zone.runOutsideAngular(() => {
             const targetElem = this.element.nativeElement.parentElement || this.element.nativeElement.parentNode;
+            // Debouncing wheel event with requestanimationframe
+            // https://gomakethings.com/debouncing-events-with-requestanimationframe-for-better-performance/
             targetElem.addEventListener('wheel',
-                    (evt) => { this.onWheel(evt); });
+                    (evt) => {
+                        if (this.requestId) {
+                            cancelAnimationFrame(this.requestId);
+                        }
+                        this.requestId = requestAnimationFrame(() => this.onWheel(evt));
+                    });
             targetElem.addEventListener('touchstart',
                     (evt) => { this.onTouchStart(evt); });
             targetElem.addEventListener('touchmove',

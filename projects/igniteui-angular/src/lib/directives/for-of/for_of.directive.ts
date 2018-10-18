@@ -30,6 +30,8 @@ import { DisplayContainerComponent } from './display.container';
 import { HVirtualHelperComponent } from './horizontal.virtual.helper.component';
 import { VirtualHelperComponent } from './virtual.helper.component';
 import {IgxScrollInertiaModule} from './../scroll-inertia/scroll_inertia.directive';
+// import { fromEvent } from 'rxjs';
+// import { takeUntil, debounceTime } from 'rxjs/operators';
 
 @Directive({ selector: '[igxFor][igxForOf]' })
 export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestroy {
@@ -164,6 +166,9 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
     private _pointerCapture;
     private _gestureObject;
 
+    private requestId;
+    // private debounceMillisec = 10;
+
     private get _isScrolledToBottom() {
         if (!this.getVerticalScroll()) {
             return true;
@@ -207,6 +212,8 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
     private virtualHelper: VirtualHelperComponent;
 
     private _embeddedViews: Array<EmbeddedViewRef<any>> = [];
+
+    // private _destroy$ = new EventEmitter();
 
     constructor(
         private _viewContainer: ViewContainerRef,
@@ -263,13 +270,34 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
             this._maxHeight = this._calcMaxBrowserHeight();
             this.vh.instance.height = this.igxForOf ? this._calcHeight() : 0;
             this._zone.runOutsideAngular(() => {
-                this.vh.instance.elementRef.nativeElement.addEventListener('scroll', (evt) => { this.onScroll(evt); });
+                // Debouncing scroll event with requestanimationframe
+                // https://gomakethings.com/debouncing-events-with-requestanimationframe-for-better-performance/
+                this.vh.instance.elementRef.nativeElement.addEventListener('scroll', (evt) => {
+                    if (this.requestId) {
+                        cancelAnimationFrame(this.requestId);
+                    }
+                    this.requestId = requestAnimationFrame(() => this.onScroll(evt));
+                });
+                // FYI. Another approach using debounceTime.
+                // fromEvent(this.vh.instance.elementRef.nativeElement, 'scroll')
+                //     .pipe(
+                //         debounceTime(this.debounceMillisec),
+                //         takeUntil(this._destroy$)
+                //     )
+                //     .subscribe((evt) => {
+                //         requestAnimationFrame(() => this.onScroll(evt));
+                //     });
                 this.dc.instance.scrollContainer = this.vh.instance.elementRef.nativeElement;
             });
         }
 
         if (this.igxForScrollOrientation === 'horizontal') {
-            this.func = (evt) => { this.onHScroll(evt); };
+            this.func = (evt) => {
+                if (this.requestId) {
+                    cancelAnimationFrame(this.requestId);
+                }
+                this.requestId = requestAnimationFrame(() => this.onHScroll(evt));
+            };
             this.hScroll = this.getElement(vc, 'igx-horizontal-virtual-helper');
             if (!this.hScroll) {
                 const hvFactory: ComponentFactory<HVirtualHelperComponent> =
@@ -279,11 +307,27 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
                 this.hScroll = this.hvh.instance.elementRef.nativeElement;
                 this._zone.runOutsideAngular(() => {
                     this.hvh.instance.elementRef.nativeElement.addEventListener('scroll', this.func);
+                    // fromEvent(this.hvh.instance.elementRef.nativeElement, 'scroll')
+                    //     .pipe(
+                    //         debounceTime(this.debounceMillisec),
+                    //         takeUntil(this._destroy$)
+                    //     )
+                    //     .subscribe((evt) => {
+                    //         requestAnimationFrame(() => this.func(evt));
+                    //     });
                     this.dc.instance.scrollContainer = this.hScroll;
                 });
             } else {
                 this._zone.runOutsideAngular(() => {
                     this.hScroll.addEventListener('scroll', this.func);
+                    // fromEvent(this.hScroll, 'scroll')
+                    //     .pipe(
+                    //         debounceTime(this.debounceMillisec),
+                    //         takeUntil(this._destroy$)
+                    //     )
+                    //     .subscribe((evt) => {
+                    //         requestAnimationFrame(() => this.func(evt));
+                    //     });
                     this.dc.instance.scrollContainer = this.hScroll;
                 });
             }
@@ -301,6 +345,7 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         if (this.hScroll) {
             this.hScroll.removeEventListener('scroll', this.func);
         }
+        // this._destroy$.emit();
     }
 
     /**
