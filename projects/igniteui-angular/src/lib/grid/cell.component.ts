@@ -12,13 +12,13 @@
     TemplateRef,
     ViewChild
 } from '@angular/core';
-import { sampleTime, takeUntil, first, tap } from 'rxjs/operators';
+import { takeUntil, first, tap } from 'rxjs/operators';
 import { IgxSelectionAPIService } from '../core/selection';
 import { DataType } from '../data-operations/data-util';
 import { IgxTextHighlightDirective } from '../directives/text-highlight/text-highlight.directive';
 import { IgxGridAPIService } from './api.service';
 import { IgxColumnComponent } from './column.component';
-import { Subject, animationFrameScheduler as rAF, fromEvent, combineLatest } from 'rxjs';
+import { Subject, fromEvent } from 'rxjs';
 import { IgxGridGroupByRowComponent } from './groupby-row.component';
 
 /**
@@ -35,7 +35,7 @@ import { IgxGridGroupByRowComponent } from './groupby-row.component';
  * ```
  */
 @Component({
-    changeDetection: ChangeDetectionStrategy.Default,
+    changeDetection: ChangeDetectionStrategy.OnPush,
     preserveWhitespaces: false,
     selector: 'igx-grid-cell',
     templateUrl: './cell.component.html'
@@ -267,7 +267,7 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
      */
     get inEditMode(): boolean {
         const editableCell = this.gridAPI.get_cell_inEditMode(this.gridID);
-        this.cdr.markForCheck();
+        // this.cdr.markForCheck();
         if (editableCell) {
             return this.cellID.rowID === editableCell.cellID.rowID &&
                 this.cellID.columnID === editableCell.cellID.columnID;
@@ -293,8 +293,9 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
         } else {
             this.gridAPI.escape_editMode(this.gridID, this.cellID);
         }
-
-        this.cdr.detectChanges();
+        // Need to call markForCheck instead of detectChanges when ChangeDetectionStrategy.OnPush.
+        // See https://github.com/angular/angular/issues/22560
+        this.cdr.markForCheck();
     }
 
     /**
@@ -509,6 +510,9 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
     @HostBinding('attr.aria-selected')
     set selected(val: boolean) {
         this.isSelected = val;
+        // Need to call markForCheck instead of detectChanges when ChangeDetectionStrategy.OnPush.
+        // See https://github.com/angular/angular/issues/22560
+        this.cdr.markForCheck();
     }
 
     @ViewChild('defaultCell', { read: TemplateRef })
@@ -543,7 +547,8 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
                 }
             }),
             takeUntil(this.destroy$),
-            sampleTime(0, rAF)
+            // Since sampleTIme causes a lot of change detections, removed it.
+            // sampleTime(0, rAF)
         );
     private cellSelectionID: string;
     private prevCellSelectionID: string;
@@ -570,7 +575,7 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
             if (fireFocus) {
                 this.nativeElement.focus();
             }
-            this.cdr.detectChanges();
+            // this.cdr.detectChanges();
             this.grid.onSelection.emit({ cell: this, event });
         }
     }
@@ -641,8 +646,19 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cellSelectionID = `${this.gridID}-cell`;
         this.prevCellSelectionID = `${this.gridID}-prev-cell`;
         this.keydown$.subscribe((event: KeyboardEvent) => this.dispatchEvent(event));
-        combineLatest([this.row.virtDirRow.onChunkLoad, this.grid.verticalScrollContainer.onChunkLoad])
-            .pipe(takeUntil(this.destroy$)).subscribe(() => this.cdr.markForCheck());
+        // It seems that NOT usisg Hostlistener is a little better performance for keyboard navigation.
+        fromEvent(this.nativeElement, 'dblclick').pipe(takeUntil(this.destroy$))
+            .subscribe(this.onDoubleClick.bind(this));
+        fromEvent(this.nativeElement, 'click').pipe(takeUntil(this.destroy$))
+            .subscribe(this.onClick.bind(this));
+        fromEvent(this.nativeElement, 'contextmenu').pipe(takeUntil(this.destroy$))
+            .subscribe(this.onContextMenu.bind(this));
+        fromEvent(this.nativeElement, 'focus').pipe(takeUntil(this.destroy$))
+            .subscribe(this.onFocus.bind(this));
+        fromEvent(this.nativeElement, 'blur').pipe(takeUntil(this.destroy$))
+            .subscribe(this.onBlur.bind(this));
+        // combineLatest([this.row.virtDirRow.onChunkLoad, this.grid.verticalScrollContainer.onChunkLoad])
+        //     .pipe(takeUntil(this.destroy$)).subscribe(() => this.cdr.markForCheck());
     }
 
     /**
@@ -685,7 +701,7 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
     /**
      *@hidden
      */
-    @HostListener('dblclick', ['$event'])
+    // @HostListener('dblclick', ['$event'])
     public onDoubleClick(event) {
         if (this.column.editable) {
             this.inEditMode = true;
@@ -700,7 +716,7 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
     /**
      *@hidden
      */
-    @HostListener('click', ['$event'])
+    // @HostListener('click', ['$event'])
     public onClick(event) {
         if (!this.selected) {
             this._updateCellSelectionStatus(true, event);
@@ -714,7 +730,7 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
     /**
      *@hidden
      */
-    @HostListener('contextmenu', ['$event'])
+    // @HostListener('contextmenu', ['$event'])
     public onContextMenu(event) {
         this.grid.onContextMenu.emit({
             cell: this,
@@ -725,7 +741,7 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
     /**
      *@hidden
      */
-    @HostListener('focus', ['$event'])
+    // @HostListener('focus', ['$event'])
     public onFocus(event) {
         this.focused = true;
         this.row.focused = true;
@@ -737,7 +753,7 @@ export class IgxGridCellComponent implements OnInit, OnDestroy, AfterViewInit {
     /**
      *@hidden
      */
-    @HostListener('blur', ['$event'])
+    // @HostListener('blur', ['$event'])
     public onBlur(event) {
         this.isFocused = false;
         this.row.focused = false;
