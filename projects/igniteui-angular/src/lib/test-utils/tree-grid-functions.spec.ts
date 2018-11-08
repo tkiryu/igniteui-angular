@@ -1,5 +1,5 @@
 import { By } from '@angular/platform-browser';
-import { IgxTreeGridComponent, IgxRowComponent, IgxGridBaseComponent, IgxGridCellComponent } from '../grids/tree-grid';
+import { IgxTreeGridComponent, IgxRowComponent, IgxGridBaseComponent, IgxGridCellComponent, IgxTreeGridCellComponent } from '../grids/tree-grid';
 import { IgxCheckboxComponent } from '../checkbox/checkbox.component';
 import { UIInteractions, wait } from './ui-interactions.spec';
 
@@ -451,6 +451,14 @@ export class TreeGridFunctions {
                     expect(cell.inEditMode).toBe(false);
                 }
                 expect(newCell.inEditMode).toBe(true);
+                resolve();
+            })
+
+    public static moveGridCellWithTab =
+        (fix, cell: IgxGridCellComponent) => new Promise(async (resolve, reject) => {
+                UIInteractions.triggerKeyDownEvtUponElem('Tab', cell.nativeElement, true);
+                await wait(DEBOUNCETIME);
+                fix.detectChanges();
                 resolve();
             })
 }
