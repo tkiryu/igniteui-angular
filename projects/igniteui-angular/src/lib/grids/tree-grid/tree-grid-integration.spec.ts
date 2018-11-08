@@ -20,7 +20,7 @@ import { IgxToggleModule } from '../../directives/toggle/toggle.directive';
 
 const CSS_CLASS_BANNER = 'igx-banner';
 
-fdescribe('IgxTreeGrid - Integration', () => {
+describe('IgxTreeGrid - Integration', () => {
     configureTestSuite();
     let fix;
     let treeGrid: IgxTreeGridComponent;
