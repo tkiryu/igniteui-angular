@@ -33,6 +33,9 @@ export class IgxChildGridRowComponent implements AfterViewInit, OnInit {
      */
     public expanded = false;
 
+    @Input()
+    public expansionDepth = 0;
+
     /**
      * @hidden
      */

@@ -4,6 +4,7 @@ import { DataUtil } from '../../data-operations/data-util';
 import { IGroupByResult } from '../../data-operations/sorting-strategy';
 import { GridBaseAPIService } from '../api.service';
 import { IgxHierarchicalGridComponent } from './hierarchical-grid.component';
+import { IgxHierarchicalGridAPIService } from './hierarchical-grid-api.service';
 /**
  *@hidden
  */
@@ -12,8 +13,11 @@ import { IgxHierarchicalGridComponent } from './hierarchical-grid.component';
     pure: true
 })
 export class IgxGridHierarchicalPipe implements PipeTransform {
+    private hGridAPI: IgxHierarchicalGridAPIService;
 
-    constructor(private gridAPI: GridBaseAPIService<IgxHierarchicalGridComponent>) { }
+    constructor(gridAPI: GridBaseAPIService<IgxHierarchicalGridComponent>) {
+        this.hGridAPI = <IgxHierarchicalGridAPIService>gridAPI;
+     }
 
     public transform(
         collection: IGroupByResult,
@@ -27,9 +31,31 @@ export class IgxGridHierarchicalPipe implements PipeTransform {
             return collection;
         }
         const result: IGroupByResult = {
-            data: DataUtil.addHierarchy(cloneArray(collection.data), state, primaryKey, childKey),
-            metadata: DataUtil.addHierarchy(cloneArray(collection.metadata), state, primaryKey, childKey)
+            data: this.addHierarchy(cloneArray(collection.data), state, primaryKey, childKey),
+            metadata: this.addHierarchy(cloneArray(collection.metadata), state, primaryKey, childKey)
         };
+        return result;
+    }
+
+    public isExpanded<T>(state, record, primaryKey): boolean {
+        for (let i = 0; i < state.length; i++) {
+            if ((primaryKey && state[i].rowID === record[primaryKey]) ||
+                (!primaryKey && state[i].rowID === record)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public addHierarchy<T>(data: T[], state, primaryKey, childKey): T[] {
+        const result = [];
+
+        data.forEach((v) => {
+            result.push(v);
+            if (v[childKey] && this.isExpanded(state, v, primaryKey)) {
+                result.push({rowID: primaryKey ? v[primaryKey] : v,  childGridData: v[childKey], key: childKey });
+            }
+        });
         return result;
     }
 }

@@ -84,6 +84,9 @@ export class IgxHierarchicalGridComponent extends IgxGridComponent implements Af
     @Input()
     public hierarchicalState = [];
 
+    @Input()
+    public expansionDepth = 0;
+
     /**
      * @hidden
      */
