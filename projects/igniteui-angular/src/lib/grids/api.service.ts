@@ -6,18 +6,17 @@ import { IFilteringExpression } from '../data-operations/filtering-expression.in
 import { ISortingExpression, SortingDirection } from '../data-operations/sorting-expression.interface';
 import { IgxGridCellComponent } from './cell.component';
 import { IgxColumnComponent } from './column.component';
-import { IGridEditEventArgs, IgxGridBaseComponent } from './grid-base.component';
+import { IGridEditEventArgs, IgxGridBaseComponent, IgxDataBindable } from './grid-base.component';
 import { IgxRowComponent } from './row.component';
 import { IFilteringOperation } from '../data-operations/filtering-condition';
 import { IFilteringExpressionsTree, FilteringExpressionsTree } from '../data-operations/filtering-expressions-tree';
 import { Transaction, TransactionType } from '../services/index';
-import { ISortingStrategy } from '../data-operations/sorting-strategy';
+
 /**
  *@hidden
  */
 @Injectable()
-export class GridBaseAPIService <T extends IgxGridBaseComponent> {
-
+export class GridBaseAPIService <T extends IgxGridBaseComponent & IgxDataBindable> {
     public change: Subject<any> = new Subject<any>();
     protected state: Map<string, T> = new Map<string, T>();
     protected editCellState: Map<string, any> = new Map<string, any>();
@@ -191,7 +190,7 @@ export class GridBaseAPIService <T extends IgxGridBaseComponent> {
         return grid.primaryKey ? data.findIndex(record => record[grid.primaryKey] === rowID) : data.indexOf(rowID);
     }
 
-    public get_row_by_key(id: string, rowSelector: any): IgxRowComponent<IgxGridBaseComponent> {
+    public get_row_by_key(id: string, rowSelector: any): IgxRowComponent<IgxGridBaseComponent & IgxDataBindable> {
         const primaryKey = this.get(id).primaryKey;
         if (primaryKey !== undefined && primaryKey !== null) {
             return this.get(id).dataRowList.find((row) => row.rowData[primaryKey] === rowSelector);
@@ -200,7 +199,7 @@ export class GridBaseAPIService <T extends IgxGridBaseComponent> {
         }
     }
 
-    public get_row_by_index(id: string, rowIndex: number): IgxRowComponent<IgxGridBaseComponent> {
+    public get_row_by_index(id: string, rowIndex: number): IgxRowComponent<IgxGridBaseComponent & IgxDataBindable> {
         return this.get(id).rowList.find((row) => row.index === rowIndex);
     }
 

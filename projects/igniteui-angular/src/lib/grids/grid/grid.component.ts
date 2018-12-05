@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, Conten
     QueryList, ViewChild, ElementRef, TemplateRef, DoCheck, NgZone, ChangeDetectorRef, ComponentFactoryResolver,
     IterableDiffers, ViewContainerRef, Inject, AfterContentInit, HostBinding, forwardRef, OnInit, Optional } from '@angular/core';
 import { GridBaseAPIService } from '../api.service';
-import { IgxGridBaseComponent, IgxGridTransaction, IFocusChangeEventArgs } from '../grid-base.component';
+import { IgxGridBaseComponent, IgxGridTransaction, IFocusChangeEventArgs, DataBindable, IgxDataBindable } from '../grid-base.component';
 import { IgxGridNavigationService } from '../grid-navigation.service';
 import { IgxGridAPIService } from './grid-api.service';
 import { ISortingExpression } from '../../data-operations/sorting-expression.interface';
@@ -63,7 +63,10 @@ export interface IGroupingDoneEventArgs {
     selector: 'igx-grid',
     templateUrl: './grid.component.html'
 })
-export class IgxGridComponent extends IgxGridBaseComponent implements OnInit, DoCheck, AfterContentInit {
+export class IgxGridComponent extends DataBindable(IgxGridBaseComponent) implements IgxDataBindable, OnInit, DoCheck, AfterContentInit {
+    @Input()
+    public data: any[];
+
     private _id = `igx-grid-${NEXT_ID++}`;
     /**
      * @hidden
@@ -110,7 +113,7 @@ export class IgxGridComponent extends IgxGridBaseComponent implements OnInit, Do
     private _gridAPI: IgxGridAPIService;
 
     constructor(
-        gridAPI: GridBaseAPIService<IgxGridBaseComponent>,
+        gridAPI: GridBaseAPIService<IgxGridComponent>,
         selection: IgxSelectionAPIService,
         @Inject(IgxGridTransaction) _transactions: TransactionService<Transaction, State>,
         elementRef: ElementRef,
@@ -824,7 +827,9 @@ export class IgxGridComponent extends IgxGridBaseComponent implements OnInit, Do
     }
 
     public ngOnInit() {
+        this.gridAPI.register(this);
         super.ngOnInit();
+
         this.onGroupingDone.pipe(takeUntil(this.destroy$)).subscribe(() => this.endEdit(true));
     }
 

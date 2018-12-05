@@ -13,11 +13,12 @@ import {
     Inject,
     NgZone,
     forwardRef,
-    Optional
+    Optional,
+    OnInit
 } from '@angular/core';
 import { IgxSelectionAPIService } from '../../core/selection';
 import { IgxTreeGridAPIService } from './tree-grid-api.service';
-import { IgxGridBaseComponent, IgxGridTransaction } from '../grid-base.component';
+import { IgxGridBaseComponent, IgxGridTransaction, DataBindable, IgxDataBindable } from '../grid-base.component';
 import { GridBaseAPIService } from '../api.service';
 import { ITreeGridRecord } from './tree-grid.interfaces';
 import { IDisplayDensityOptions, DisplayDensityToken } from '../../core/displayDensity';
@@ -55,7 +56,7 @@ let NEXT_ID = 0;
     providers: [ IgxGridNavigationService, { provide: GridBaseAPIService, useClass: IgxTreeGridAPIService },
         { provide: IgxGridBaseComponent, useExisting: forwardRef(() => IgxTreeGridComponent) }, IgxFilteringService]
 })
-export class IgxTreeGridComponent extends IgxGridBaseComponent {
+export class IgxTreeGridComponent extends DataBindable(IgxGridBaseComponent) implements OnInit {
     private _id = `igx-tree-grid-${NEXT_ID++}`;
 
     /**
@@ -236,7 +237,7 @@ export class IgxTreeGridComponent extends IgxGridBaseComponent {
     private _gridAPI: IgxTreeGridAPIService;
 
     constructor(
-        gridAPI: GridBaseAPIService<IgxGridBaseComponent>,
+        gridAPI: GridBaseAPIService<IgxGridBaseComponent & IgxDataBindable>,
         selection: IgxSelectionAPIService,
         @Inject(IgxGridTransaction) protected _transactions: IgxHierarchicalTransactionService<HierarchicalTransaction, HierarchicalState>,
         elementRef: ElementRef,
@@ -252,6 +253,11 @@ export class IgxTreeGridComponent extends IgxGridBaseComponent {
             super(gridAPI, selection, _transactions, elementRef, zone, document, cdr, resolver, differs, viewRef, navigation,
                 filteringService, _displayDensityOptions);
         this._gridAPI = <IgxTreeGridAPIService>gridAPI;
+    }
+
+    public ngOnInit() {
+        this.gridAPI.register(this);
+        super.ngOnInit();
     }
 
     /**

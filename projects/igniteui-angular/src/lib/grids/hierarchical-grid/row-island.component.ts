@@ -89,7 +89,7 @@ export class IgxRowIslandComponent extends IgxGridComponent implements AfterCont
     }
 
     constructor(
-        gridAPI: GridBaseAPIService<IgxGridBaseComponent>,
+        gridAPI: GridBaseAPIService<IgxGridComponent>,
         selection: IgxSelectionAPIService,
         @Inject(IgxGridTransaction) _transactions: TransactionService<Transaction, State>,
         elementRef: ElementRef,

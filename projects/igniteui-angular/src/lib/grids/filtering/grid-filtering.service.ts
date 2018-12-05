@@ -2,7 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { GridBaseAPIService } from '../api.service';
 import { IgxIconService } from '../../icon/icon.service';
 import { FilteringExpressionsTree, IFilteringExpressionsTree } from '../../data-operations/filtering-expressions-tree';
-import { IgxGridBaseComponent, IColumnResizeEventArgs } from '../grid-base.component';
+import { IgxGridBaseComponent, IColumnResizeEventArgs, IgxDataBindable } from '../grid-base.component';
 import icons from './svgIcons';
 import { IFilteringExpression, FilteringLogic } from '../../data-operations/filtering-expression.interface';
 import { Subject } from 'rxjs';
@@ -47,7 +47,7 @@ export class IgxFilteringService implements OnDestroy {
     public shouldFocusNext = false;
     public columnToMoreIconHidden = new Map<string, boolean>();
 
-    constructor(private gridAPI: GridBaseAPIService<IgxGridBaseComponent>, private iconService: IgxIconService) {}
+    constructor(private gridAPI: GridBaseAPIService<IgxGridBaseComponent & IgxDataBindable>, private iconService: IgxIconService) {}
 
     ngOnDestroy(): void {
         this.destroy$.next(true);

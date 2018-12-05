@@ -5,7 +5,7 @@ import {
 import { DataType } from '../data-operations/data-util';
 import { GridBaseAPIService } from './api.service';
 import { IgxColumnComponent } from './column.component';
-import { IgxGridBaseComponent } from './grid-base.component';
+import { IgxGridBaseComponent, IgxDataBindable } from './grid-base.component';
 /**
  *@hidden
  */
@@ -77,7 +77,7 @@ export class IgxGridSummaryComponent implements DoCheck {
     public summaryItemHeight;
     public itemClass = 'igx-grid-summary__item';
 
-    constructor(public gridAPI: GridBaseAPIService<IgxGridBaseComponent>, public cdr: ChangeDetectorRef) { }
+    constructor(public gridAPI: GridBaseAPIService<IgxGridBaseComponent & IgxDataBindable>, public cdr: ChangeDetectorRef) { }
 
     ngDoCheck() {
         this.summaryItemHeight = this.gridAPI.get(this.gridID).defaultRowHeight;

@@ -18,7 +18,7 @@ import { GridBaseAPIService } from './api.service';
 import { IgxGridCellComponent } from './cell.component';
 import { IgxColumnComponent } from './column.component';
 import { TransactionType, State } from '../services';
-import { IgxGridBaseComponent } from './grid-base.component';
+import { IgxGridBaseComponent, IgxDataBindable } from './grid-base.component';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,7 +26,7 @@ import { IgxGridBaseComponent } from './grid-base.component';
     selector: 'igx-row',
     templateUrl: './grid/grid-row.component.html'
 })
-export class IgxRowComponent<T extends IgxGridBaseComponent> implements DoCheck {
+export class IgxRowComponent<T extends IgxGridBaseComponent & IgxDataBindable> implements DoCheck {
 
     private _rowData: any;
     /**
@@ -183,7 +183,7 @@ export class IgxRowComponent<T extends IgxGridBaseComponent> implements DoCheck 
      * ```
      */
     get grid(): T {
-        return this.gridAPI.get(this.gridID);
+        return this.gridAPI.get(this.gridID) as T;
     }
 
     /**
@@ -224,7 +224,7 @@ export class IgxRowComponent<T extends IgxGridBaseComponent> implements DoCheck 
      */
     protected _rowSelection = false;
 
-    constructor(public gridAPI: GridBaseAPIService<T>,
+    constructor(public gridAPI: GridBaseAPIService<IgxGridBaseComponent & IgxDataBindable>,
         private selection: IgxSelectionAPIService,
         public element: ElementRef,
         public cdr: ChangeDetectorRef) { }

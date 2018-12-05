@@ -30,6 +30,7 @@ import {
 import { IgxGridHeaderComponent } from './grid-header.component';
 import { valToPxlsUsingRange } from '../core/utils';
 import { DefaultSortingStrategy, ISortingStrategy } from '../data-operations/sorting-strategy';
+import { IgxDataBindable } from './grid';
 
 /**
  * **Ignite UI for Angular Column** -
@@ -846,7 +847,7 @@ export class IgxColumnComponent implements AfterContentInit {
         }
     }
 
-    constructor(public gridAPI: GridBaseAPIService<IgxGridBaseComponent>, public cdr: ChangeDetectorRef) { }
+    constructor(public gridAPI: GridBaseAPIService<IgxGridBaseComponent & IgxDataBindable>, public cdr: ChangeDetectorRef) { }
     /**
      *@hidden
      */

@@ -19,7 +19,8 @@ import {
     AfterViewInit,
     DoCheck,
     AfterContentInit,
-    Optional
+    Optional,
+    OnInit
 } from '@angular/core';
 import { IgxGridBaseComponent, IgxGridTransaction } from '../grid-base.component';
 import { GridBaseAPIService } from '../api.service';
@@ -29,8 +30,8 @@ import { IgxChildGridRowComponent } from './child-grid-row.component';
 import { IgxGridComponent } from '../grid/grid.component';
 import { IgxFilteringService } from '../filtering/grid-filtering.service';
 import { IDisplayDensityOptions, DisplayDensityToken } from '../../core/displayDensity';
-import { IgxColumnComponent, IgxColumnGroupComponent } from '../grid';
-import { Transaction, TransactionService, State } from '../../services/index';
+import { IgxColumnComponent, IgxColumnGroupComponent, DataBindable, IgxDataBindable } from '../grid';
+import { Transaction, TransactionService, State, TransactionType } from '../../services/index';
 import { DOCUMENT } from '@angular/common';
 import { IgxGridNavigationService } from '../grid-navigation.service';
 import { IgxSummaryOperand } from './../grid-summary';
@@ -48,7 +49,7 @@ let NEXT_ID = 0;
         { provide: IgxGridBaseComponent, useExisting: forwardRef(() => IgxHierarchicalGridComponent) },
         IgxFilteringService ]
     })
-export class IgxHierarchicalGridComponent extends IgxGridComponent implements AfterViewInit, AfterContentInit {
+export class IgxHierarchicalGridComponent extends IgxGridComponent implements OnInit, AfterViewInit, AfterContentInit {
     private h_id = `igx-hierarchical-grid-${NEXT_ID++}`;
     public hgridAPI: IgxHierarchicalGridAPIService;
     public dataInitialized = false;
@@ -299,7 +300,7 @@ export class IgxHierarchicalGridComponent extends IgxGridComponent implements Af
     }
 
     constructor(
-        gridAPI: GridBaseAPIService<IgxGridBaseComponent>,
+        gridAPI: GridBaseAPIService<IgxGridComponent>,
         selection: IgxHierarchicalSelectionAPIService,
         @Inject(IgxGridTransaction) _transactions: TransactionService<Transaction, State>,
         elementRef: ElementRef,
@@ -327,6 +328,11 @@ export class IgxHierarchicalGridComponent extends IgxGridComponent implements Af
                 filteringService,
                 _displayDensityOptions);
         this.hgridAPI = <IgxHierarchicalGridAPIService>gridAPI;
+    }
+
+    public ngOnInit() {
+        this.gridAPI.register(this);
+        super.ngOnInit();
     }
 }
 export interface IPathSegment {

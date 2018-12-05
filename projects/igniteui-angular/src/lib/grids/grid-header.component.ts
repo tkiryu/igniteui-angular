@@ -22,7 +22,7 @@ import { GridBaseAPIService } from './api.service';
 import { IgxColumnComponent } from './column.component';
 import { IgxColumnMovingService } from './grid.common';
 import { isFirefox } from '../core/utils';
-import { IgxGridBaseComponent } from './grid-base.component';
+import { IgxGridBaseComponent, IgxDataBindable } from './grid-base.component';
 import { IgxFilteringService } from './filtering/grid-filtering.service';
 import { IgxGridComponent } from './grid';
 
@@ -158,7 +158,7 @@ export class IgxGridHeaderComponent implements OnInit, DoCheck, AfterViewInit, O
     private _pinnedMaxWidth;
 
     constructor(
-        public gridAPI: GridBaseAPIService<IgxGridBaseComponent>,
+        public gridAPI: GridBaseAPIService<IgxGridBaseComponent & IgxDataBindable>,
         public cdr: ChangeDetectorRef,
         public elementRef: ElementRef,
         public zone: NgZone,

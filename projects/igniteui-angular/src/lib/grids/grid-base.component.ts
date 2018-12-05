@@ -107,7 +107,7 @@ export interface IColumnResizeEventArgs {
 export interface IRowSelectionEventArgs {
     oldSelection: any[];
     newSelection: any[];
-    row?: IgxRowComponent<IgxGridBaseComponent>;
+    row?: IgxRowComponent<IgxGridBaseComponent & IgxDataBindable>;
     event?: Event;
 }
 
@@ -146,18 +146,303 @@ export interface IFocusChangeEventArgs {
     cancel: boolean;
 }
 
+export interface IgxDataBindable {
+    data: any[];
+}
+
+export function DataBindable(Base: typeof IgxGridBaseComponent) {
+    abstract class DataBindableComponent extends Base implements IgxDataBindable, OnInit, AfterContentInit {
+        /**
+         * An @Input property that lets you fill the `IgxGridComponent` with an array of data.
+         * ```html
+         * <igx-grid [data]="Data" [autoGenerate]="true"></igx-grid>
+         * ```
+         * @memberof IgxGridBaseComponent
+         */
+        @Input()
+        public data: any[];
+
+        /**
+         * Emitted when a `IgxGridRowComponent` is being added to the `IgxGridComponent` through the API.
+         * Returns the data for the new `IgxGridRowComponent` object.
+         * ```typescript
+         * rowAdded(event: IRowDataEventArgs){
+         *    const rowInfo = event;
+         * }
+         * ```
+         * ```html
+         * <igx-grid #grid [data]="localData" (onRowAdded)="rowAdded($event)" [height]="'305px'" [autoGenerate]="true"></igx-grid>
+         * ```
+         * @memberof IgxGridBaseComponent
+         */
+        @Output()
+        public onRowAdded = new EventEmitter<IRowDataEventArgs>();
+
+        /**
+         * Emitted when a `IgxGridRowComponent` is deleted through the `IgxGridComponent` API.
+         * Returns an `IRowDataEventArgs` object.
+         * ```typescript
+         * rowDeleted(event: IRowDataEventArgs){
+         *    const rowInfo = event;
+         * }
+         * ```
+         * ```html
+         * <igx-grid #grid [data]="localData" (onRowDeleted)="rowDeleted($event)" [height]="'305px'" [autoGenerate]="true"></igx-grid>
+         * ```
+         * @memberof IgxGridBaseComponent
+         */
+        @Output()
+        public onRowDeleted = new EventEmitter<IRowDataEventArgs>();
+
+        constructor(private inGridAPI: GridBaseAPIService<IgxGridBaseComponent & IgxDataBindable>,
+            private inSelection: IgxSelectionAPIService,
+            @Inject(IgxGridTransaction) private inTransactions: TransactionService<Transaction, State>,
+            private inElementRef: ElementRef,
+            private inZone: NgZone,
+            @Inject(DOCUMENT) private inDocument,
+            private inCdr: ChangeDetectorRef,
+            private inResolver: ComponentFactoryResolver,
+            private inDiffers: IterableDiffers,
+            private inViewRef: ViewContainerRef,
+            private inNavigation: IgxGridNavigationService,
+            private inFilteringService: IgxFilteringService,
+            @Optional() @Inject(DisplayDensityToken) private inDisplayDensityOptions: IDisplayDensityOptions) {
+            super(inGridAPI,
+                inSelection,
+                inTransactions,
+                inElementRef,
+                inZone,
+                inDocument,
+                inCdr,
+                inResolver,
+                inDiffers,
+                inViewRef,
+                inNavigation,
+                inFilteringService,
+                inDisplayDensityOptions);
+        }
+
+        public ngOnInit() {
+            super.ngOnInit();
+
+            this.onRowAdded.pipe(takeUntil(this.destroy$)).subscribe(() => this.refreshGridState());
+            this.onRowDeleted.pipe(takeUntil(this.destroy$)).subscribe(() => this.refreshGridState());
+        }
+
+        public ngAfterContentInit() {
+            if (this.autoGenerate) {
+                this.autogenerateColumns();
+            }
+
+            super.ngAfterContentInit();
+
+            this._derivePossibleHeight();
+            this.markForCheck();
+        }
+
+        public get gridData() {
+            return this.data;
+        }
+
+        public get template(): TemplateRef<any> {
+            if (this.filteredData && this.filteredData.length === 0) {
+                return this.emptyGridTemplate ? this.emptyGridTemplate : this.emptyFilteredGridTemplate;
+            }
+
+            if (this.data && this.dataLength === 0) {
+                return this.emptyGridTemplate ? this.emptyGridTemplate : this.emptyGridDefaultTemplate;
+            }
+        }
+
+        /**
+         * Creates a new `IgxGridRowComponent` and adds the data record to the end of the data source.
+         * ```typescript
+         * const record = {
+         *     ID: this.grid1.data[this.grid1.data.length - 1].ID + 1,
+         *     Name: this.newRecord
+         * };
+         * this.grid1.addRow(record);
+         * ```
+         * @param data
+         * @memberof IgxGridBaseComponent
+         */
+        public addRow(data: any, parentID?: any): void {
+            // Add row goes to transactions and if rowEditable is properly implemented, added rows will go to pending transactions
+            // If there is a row in edit - > commit and close
+            if (this.transactions.enabled) {
+                const transactionId = this.primaryKey ? data[this.primaryKey] : data;
+                const transaction: Transaction = { id: transactionId, type: TransactionType.ADD, newValue: data };
+                this.transactions.add(transaction);
+            } else {
+                this.data.push(data);
+            }
+
+            this.onRowAdded.emit({ data });
+            this._pipeTrigger++;
+            this.cdr.markForCheck();
+
+            this.refreshSearch();
+        }
+
+         /**
+         * Removes the `IgxGridRowComponent` and the corresponding data record by primary key.
+         * Requires that the `primaryKey` property is set.
+         * The method accept rowSelector as a parameter, which is the rowID.
+         * ```typescript
+         * this.grid1.deleteRow(0);
+         * ```
+         * @param rowSelector
+         * @memberof IgxGridBaseComponent
+         */
+        public deleteRow(rowSelector: any): void {
+            if (this.primaryKey !== undefined && this.primaryKey !== null) {
+                this.deleteRowById(rowSelector);
+            }
+        }
+
+        /**
+         * @hidden
+         * @param
+         */
+        public deleteRowById(rowId: any) {
+            let index: number;
+            const data = this.gridAPI.get_all_data(this.id);
+            if (this.primaryKey) {
+                index = data.map((record) => record[this.primaryKey]).indexOf(rowId);
+            } else {
+                index = data.indexOf(rowId);
+            }
+            const state: State = this.transactions.getState(rowId);
+            const hasRowInNonDeletedState = state && state.type !== TransactionType.DELETE;
+
+            //  if there is a row (index !== -1) and the we have cell in edit mode on same row exit edit mode
+            //  if there is no row (index === -1), but there is a row in ADD or UPDATE state do as above
+            //  Otherwise just exit - there is nothing to delete
+            if (index !== -1 || hasRowInNonDeletedState) {
+                const editableCell = this.gridAPI.get_cell_inEditMode(this.id);
+                if (editableCell && editableCell.cellID.rowID === rowId) {
+                    this.gridAPI.escape_editMode(this.id, editableCell.cellID);
+                }
+            } else {
+                return;
+            }
+
+            //  TODO: should we emit this when cascadeOnDelete is true for each row?!?!
+            this.onRowDeleted.emit({ data: data[index] });
+
+            //  first deselect row then delete it
+            if (this.rowSelectable && this.selection.is_item_selected(this.id, rowId)) {
+                this.deselectRows([rowId]);
+            } else {
+                this.checkHeaderCheckboxStatus();
+            }
+
+            this.deleteRowFromData(rowId, index);
+            this._pipeTrigger++;
+            this.cdr.markForCheck();
+
+            this.refreshSearch();
+            if (data.length % this.perPage === 0 && this.isLastPage && this.page !== 0) {
+                this.page--;
+            }
+        }
+
+        protected deleteRowFromData(rowID: any, index: number) {
+            //  if there is a row (index !== 0) delete it
+            //  if there is a row in ADD or UPDATE state change it's state to DELETE
+            if (index !== -1) {
+                if (this.transactions.enabled) {
+                    const transaction: Transaction = { id: rowID, type: TransactionType.DELETE, newValue: null };
+                    this.transactions.add(transaction, this.data[index]);
+                } else {
+                    this.data.splice(index, 1);
+                }
+            } else {
+                const state: State = this.transactions.getState(rowID);
+                this.transactions.add({ id: rowID, type: TransactionType.DELETE, newValue: null }, state && state.recordRef);
+            }
+        }
+
+        /**
+         * @hidden
+         */
+        protected autogenerateColumns() {
+            const factory = this.resolver.resolveComponentFactory(IgxColumnComponent);
+            const fields = Object.keys(this.data[0]);
+            const columns = [];
+
+            fields.forEach((field) => {
+                const ref = this.viewRef.createComponent(factory, null, this.viewRef.injector);
+                ref.instance.field = field;
+                ref.instance.dataType = this.resolveDataTypes(this.data[0][field]);
+                ref.changeDetectorRef.detectChanges();
+                columns.push(ref.instance);
+            });
+
+            this.columnList.reset(columns);
+        }
+
+        /**
+         * @hidden
+         */
+        protected get rowBasedHeight() {
+            if (this.data && this.data.length) {
+                return this.dataLength * this.rowHeight;
+            }
+            return 0;
+        }
+
+        protected _derivePossibleHeight() {
+            if ((this._height && this._height.indexOf('%') === -1) || !this._height) {
+                return;
+            }
+            if (!this.nativeElement.parentNode.clientHeight) {
+                const viewPortHeight = document.documentElement.clientHeight;
+                this._height = this.rowBasedHeight <= viewPortHeight ? null : viewPortHeight.toString();
+            } else {
+                const parentHeight = this.nativeElement.parentNode.getBoundingClientRect().height;
+                this._height = this.rowBasedHeight <= parentHeight ? null : this._height;
+            }
+            this.calculateGridHeight();
+            this.cdr.detectChanges();
+        }
+
+        protected writeToData(rowIndex: number, value: any) {
+            mergeObjects(this.data[rowIndex], value);
+        }
+
+        /**
+         * Returns an array containing the filtered data.
+         * ```typescript
+         * const filteredData = this.grid1.filteredSortedData;
+         * ```
+         * @memberof IgxGridBaseComponent
+         */
+        get filteredSortedData(): any[] {
+            return this.resolveFilteredSortedData();
+        }
+
+        /**
+         * @hidden
+         */
+        protected resolveFilteredSortedData(): any[] {
+            let data: any[] = this.filteredData ? this.filteredData : this.data;
+            if (!this.filteredData && this.transactions.enabled) {
+                data = DataUtil.mergeTransactions(
+                    cloneArray(data),
+                    this.transactions.getAggregatedChanges(true),
+                    this.primaryKey
+                );
+            }
+
+            return data;
+        }
+    }
+
+    return DataBindableComponent;
+}
+
 export abstract class IgxGridBaseComponent extends DisplayDensityBase implements OnInit, OnDestroy, AfterContentInit, AfterViewInit {
-
-    /**
-     * An @Input property that lets you fill the `IgxGridComponent` with an array of data.
-     * ```html
-     * <igx-grid [data]="Data" [autoGenerate]="true"></igx-grid>
-     * ```
-	 * @memberof IgxGridBaseComponent
-     */
-    @Input()
-    public data: any[];
-
     /**
      * An @Input property that autogenerates the `IgxGridComponent` columns.
      * The default value is false.
@@ -1001,38 +1286,6 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
     public onPagingDone = new EventEmitter<IPageEventArgs>();
 
     /**
-     * Emitted when a `IgxGridRowComponent` is being added to the `IgxGridComponent` through the API.
-     * Returns the data for the new `IgxGridRowComponent` object.
-     * ```typescript
-     * rowAdded(event: IRowDataEventArgs){
-     *    const rowInfo = event;
-     * }
-     * ```
-     * ```html
-     * <igx-grid #grid [data]="localData" (onRowAdded)="rowAdded($event)" [height]="'305px'" [autoGenerate]="true"></igx-grid>
-     * ```
-	 * @memberof IgxGridBaseComponent
-     */
-    @Output()
-    public onRowAdded = new EventEmitter<IRowDataEventArgs>();
-
-    /**
-     * Emitted when a `IgxGridRowComponent` is deleted through the `IgxGridComponent` API.
-     * Returns an `IRowDataEventArgs` object.
-     * ```typescript
-     * rowDeleted(event: IRowDataEventArgs){
-     *    const rowInfo = event;
-     * }
-     * ```
-     * ```html
-     * <igx-grid #grid [data]="localData" (onRowDeleted)="rowDeleted($event)" [height]="'305px'" [autoGenerate]="true"></igx-grid>
-     * ```
-	 * @memberof IgxGridBaseComponent
-     */
-    @Output()
-    public onRowDeleted = new EventEmitter<IRowDataEventArgs>();
-
-    /**
      * Emitted when a new chunk of data is loaded from virtualization.
      * ```typescript
      *  <igx-grid #grid [data]="localData" [autoGenerate]="true" (onDataPreLoad)='handleDataPreloadEvent()'></igx-grid>
@@ -1349,7 +1602,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
     /**
      * @hidden
      */
-    public get rowInEditMode(): IgxRowComponent<IgxGridBaseComponent> {
+    public get rowInEditMode(): IgxRowComponent<IgxGridBaseComponent & IgxDataBindable> {
         const editRowState = this.gridAPI.get_edit_row_state(this.id);
         return editRowState !== null ? this.rowList.find(e => e.rowID === editRowState.rowID) : null;
     }
@@ -1995,7 +2248,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
     private columnListDiffer;
     private _hiddenColumnsText = '';
     private _pinnedColumnsText = '';
-    private _height = '100%';
+    protected _height = '100%';
     private _width = '100%';
     private _rowHeight;
     private _ngAfterViewInitPaassed = false;
@@ -2062,7 +2315,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
     }
 
     constructor(
-        private gridAPI: GridBaseAPIService<IgxGridBaseComponent>,
+        protected gridAPI: GridBaseAPIService<IgxGridBaseComponent & IgxDataBindable>,
         public selection: IgxSelectionAPIService,
         @Inject(IgxGridTransaction) protected _transactions: TransactionService<Transaction, State>,
         private elementRef: ElementRef,
@@ -2086,7 +2339,6 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
      * @hidden
      */
     public ngOnInit() {
-        this.gridAPI.register(this);
         this.navigation.grid = this;
         this.filteringService.gridId = this.id;
         this.columnListDiffer = this.differs.find([]).create(null);
@@ -2094,8 +2346,6 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
         this.calcHeight = 0;
         this.calcRowCheckboxWidth = 0;
 
-        this.onRowAdded.pipe(takeUntil(this.destroy$)).subscribe(() => this.refreshGridState());
-        this.onRowDeleted.pipe(takeUntil(this.destroy$)).subscribe(() => this.refreshGridState());
         this.onFilteringDone.pipe(takeUntil(this.destroy$)).subscribe(() => this.refreshGridState());
         this.onCellEdit.pipe(takeUntil(this.destroy$)).subscribe((editCell) => this.clearSummaryCache(editCell));
         this.onRowEdit.pipe(takeUntil(this.destroy$)).subscribe(() => this.clearSummaryCache());
@@ -2116,17 +2366,11 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
      * @hidden
      */
     public ngAfterContentInit() {
-        if (this.autoGenerate) {
-            this.autogenerateColumns();
-        }
-
         this.initColumns(this.columnList, (col: IgxColumnComponent) => this.onColumnInit.emit(col));
 
         this.columnListDiffer.diff(this.columnList);
         this.clearSummaryCache();
         this.summariesHeight = this.calcMaxSummaryHeight();
-        this._derivePossibleHeight();
-        this.markForCheck();
 
         this.columnList.changes
             .pipe(takeUntil(this.destroy$))
@@ -2274,6 +2518,10 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
         return this.elementRef.nativeElement;
     }
 
+    get gridData() {
+        return [];
+    }
+
     /**
      * @hidden
      */
@@ -2406,7 +2654,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
      * @param index
      * @memberof IgxGridBaseComponent
      */
-    public getRowByIndex(index: number): IgxRowComponent<IgxGridBaseComponent> {
+    public getRowByIndex(index: number): IgxRowComponent<IgxGridBaseComponent & IgxDataBindable> {
         return this.gridAPI.get_row_by_index(this.id, index);
     }
 
@@ -2419,7 +2667,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
      * @param keyValue
      * @memberof IgxGridBaseComponent
      */
-    public getRowByKey(keyValue: any): IgxRowComponent<IgxGridBaseComponent> {
+    public getRowByKey(keyValue: any): IgxRowComponent<IgxGridBaseComponent & IgxDataBindable> {
         return this.gridAPI.get_row_by_key(this.id, keyValue);
     }
 
@@ -2751,118 +2999,6 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
             this.rowList.forEach((row) => row.cdr.markForCheck());
         }
         this.cdr.detectChanges();
-    }
-
-    /**
-     * Creates a new `IgxGridRowComponent` and adds the data record to the end of the data source.
-     * ```typescript
-     * const record = {
-     *     ID: this.grid1.data[this.grid1.data.length - 1].ID + 1,
-     *     Name: this.newRecord
-     * };
-     * this.grid1.addRow(record);
-     * ```
-     * @param data
-     * @memberof IgxGridBaseComponent
-     */
-    public addRow(data: any, parentID?: any): void {
-        // Add row goes to transactions and if rowEditable is properly implemented, added rows will go to pending transactions
-        // If there is a row in edit - > commit and close
-        if (this.transactions.enabled) {
-            const transactionId = this.primaryKey ? data[this.primaryKey] : data;
-            const transaction: Transaction = { id: transactionId, type: TransactionType.ADD, newValue: data };
-            this.transactions.add(transaction);
-        } else {
-            this.data.push(data);
-        }
-
-        this.onRowAdded.emit({ data });
-        this._pipeTrigger++;
-        this.cdr.markForCheck();
-
-        this.refreshSearch();
-    }
-
-    /**
-     * Removes the `IgxGridRowComponent` and the corresponding data record by primary key.
-     * Requires that the `primaryKey` property is set.
-     * The method accept rowSelector as a parameter, which is the rowID.
-     * ```typescript
-     * this.grid1.deleteRow(0);
-     * ```
-     * @param rowSelector
-     * @memberof IgxGridBaseComponent
-     */
-    public deleteRow(rowSelector: any): void {
-        if (this.primaryKey !== undefined && this.primaryKey !== null) {
-            this.deleteRowById(rowSelector);
-        }
-    }
-
-    /**
-     * @hidden
-     * @param
-     */
-    public deleteRowById(rowId: any) {
-        let index: number;
-        const data = this.gridAPI.get_all_data(this.id);
-        if (this.primaryKey) {
-            index = data.map((record) => record[this.primaryKey]).indexOf(rowId);
-        } else {
-            index = data.indexOf(rowId);
-        }
-        const state: State = this.transactions.getState(rowId);
-        const hasRowInNonDeletedState = state && state.type !== TransactionType.DELETE;
-
-        //  if there is a row (index !== -1) and the we have cell in edit mode on same row exit edit mode
-        //  if there is no row (index === -1), but there is a row in ADD or UPDATE state do as above
-        //  Otherwise just exit - there is nothing to delete
-        if (index !== -1 || hasRowInNonDeletedState) {
-            const editableCell = this.gridAPI.get_cell_inEditMode(this.id);
-            if (editableCell && editableCell.cellID.rowID === rowId) {
-                this.gridAPI.escape_editMode(this.id, editableCell.cellID);
-            }
-        } else {
-            return;
-        }
-
-        //  TODO: should we emit this when cascadeOnDelete is true for each row?!?!
-        this.onRowDeleted.emit({ data: data[index] });
-
-        //  first deselect row then delete it
-        if (this.rowSelectable && this.selection.is_item_selected(this.id, rowId)) {
-            this.deselectRows([rowId]);
-        } else {
-            this.checkHeaderCheckboxStatus();
-        }
-
-        this.deleteRowFromData(rowId, index);
-        this._pipeTrigger++;
-        this.cdr.markForCheck();
-
-        this.refreshSearch();
-        if (data.length % this.perPage === 0 && this.isLastPage && this.page !== 0) {
-            this.page--;
-        }
-    }
-
-    /**
-     * @hidden
-     */
-    protected deleteRowFromData(rowID: any, index: number) {
-        //  if there is a row (index !== 0) delete it
-        //  if there is a row in ADD or UPDATE state change it's state to DELETE
-        if (index !== -1) {
-            if (this.transactions.enabled) {
-                const transaction: Transaction = { id: rowID, type: TransactionType.DELETE, newValue: null };
-                this.transactions.add(transaction, this.data[index]);
-            } else {
-                this.data.splice(index, 1);
-            }
-        } else {
-            const state: State = this.transactions.getState(rowID);
-            this.transactions.add({ id: rowID, type: TransactionType.DELETE, newValue: null }, state && state.recordRef);
-        }
     }
 
     /**
@@ -3319,34 +3455,6 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
     /**
      * @hidden
      */
-    protected get rowBasedHeight() {
-        if (this.data && this.data.length) {
-            return this.dataLength * this.rowHeight;
-        }
-        return 0;
-    }
-
-    /**
-     * @hidden
-     */
-    protected _derivePossibleHeight() {
-        if ((this._height && this._height.indexOf('%') === -1) || !this._height) {
-            return;
-        }
-        if (!this.nativeElement.parentNode.clientHeight) {
-            const viewPortHeight = document.documentElement.clientHeight;
-            this._height = this.rowBasedHeight <= viewPortHeight ? null : viewPortHeight.toString();
-        } else {
-            const parentHeight = this.nativeElement.parentNode.getBoundingClientRect().height;
-            this._height = this.rowBasedHeight <= parentHeight ? null : this._height;
-        }
-        this.calculateGridHeight();
-        this.cdr.detectChanges();
-    }
-
-    /**
-     * @hidden
-     */
     protected _derivePossibleWidth() {
         if (!this._columnWidthSetByUser) {
             this._columnWidth = this.getPossibleColumnWidth();
@@ -3608,24 +3716,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
         return DataType.String;
     }
 
-    /**
-     * @hidden
-     */
-    protected autogenerateColumns() {
-        const factory = this.resolver.resolveComponentFactory(IgxColumnComponent);
-        const fields = Object.keys(this.data[0]);
-        const columns = [];
-
-        fields.forEach((field) => {
-            const ref = this.viewRef.createComponent(factory, null, this.viewRef.injector);
-            ref.instance.field = field;
-            ref.instance.dataType = this.resolveDataTypes(this.data[0][field]);
-            ref.changeDetectorRef.detectChanges();
-            columns.push(ref.instance);
-        });
-
-        this.columnList.reset(columns);
-    }
+    public deleteRowById(rowID: any) {}
 
     /**
      * @hidden
@@ -3698,13 +3789,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
     }
 
     public get template(): TemplateRef<any> {
-        if (this.filteredData && this.filteredData.length === 0) {
-            return this.emptyGridTemplate ? this.emptyGridTemplate : this.emptyFilteredGridTemplate;
-        }
-
-        if (this.data && this.dataLength === 0) {
-            return this.emptyGridTemplate ? this.emptyGridTemplate : this.emptyGridDefaultTemplate;
-        }
+        return this.emptyGridTemplate ? this.emptyGridTemplate : this.emptyGridDefaultTemplate;
     }
 
     /**
@@ -3861,7 +3946,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
     /**
      * @hidden
      */
-    public triggerRowSelectionChange(newSelectionAsSet: Set<any>, row?: IgxRowComponent<IgxGridBaseComponent>,
+    public triggerRowSelectionChange(newSelectionAsSet: Set<any>, row?: IgxRowComponent<IgxGridBaseComponent & IgxDataBindable>,
         event?: Event, headerStatus?: boolean) {
         const oldSelectionAsSet = this.selection.get(this.id);
         const oldSelection = oldSelectionAsSet ? Array.from(oldSelectionAsSet) : [];
@@ -3981,32 +4066,17 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
         return this.lastSearchInfo.matchInfoCache.length;
     }
 
-    /**
-     * Returns an array containing the filtered data.
-     * ```typescript
-     * const filteredData = this.grid1.filteredSortedData;
-     * ```
-	 * @memberof IgxGridBaseComponent
-     */
-    get filteredSortedData(): any[] {
-        return this.resolveFilteredSortedData();
-    }
-
-    /**
-     * @hidden
-     */
-    protected resolveFilteredSortedData(): any[] {
-        let data: any[] = this.filteredData ? this.filteredData : this.data;
-        if (!this.filteredData && this.transactions.enabled) {
-            data = DataUtil.mergeTransactions(
-                cloneArray(data),
-                this.transactions.getAggregatedChanges(true),
-                this.primaryKey
-            );
+     /**
+         * Returns an array containing the filtered data.
+         * ```typescript
+         * const filteredData = this.grid1.filteredSortedData;
+         * ```
+         * @memberof IgxGridBaseComponent
+         */
+        get filteredSortedData(): any[] {
+            return this.filteredData;
         }
 
-        return data;
-    }
 
     /**
      * @hidden
@@ -4289,7 +4359,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
             this.nativeElement.focus();
         } */
 
-        private changeRowEditingOverlayStateOnScroll(row: IgxRowComponent<IgxGridBaseComponent>) {
+        private changeRowEditingOverlayStateOnScroll(row: IgxRowComponent<IgxGridBaseComponent & IgxDataBindable>) {
             if (!this.rowEditable || this.rowEditingOverlay.collapsed) {
                 return;
             }
@@ -4353,7 +4423,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
     /**
      * @hidden
      */
-    public repositionRowEditingOverlay(row: IgxRowComponent<IgxGridBaseComponent>) {
+    public repositionRowEditingOverlay(row: IgxRowComponent<IgxGridBaseComponent & IgxDataBindable>) {
         if (!this.rowEditingOverlay.collapsed) {
             const rowStyle = this.rowEditingOverlay.element.parentElement.style;
             if (row) {
@@ -4389,15 +4459,12 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
         return rowChanges ? Object.keys(rowChanges).length : 0;
     }
 
-    protected writeToData(rowIndex: number, value: any) {
-        mergeObjects(this.data[rowIndex], value);
-    }
     /**
      * TODO: Refactor
      * @hidden
      */
 
-    private endRowTransaction(commit: boolean, rowID: any, rowObject: IgxRowComponent<IgxGridBaseComponent>) {
+    private endRowTransaction(commit: boolean, rowID: any, rowObject: IgxRowComponent<IgxGridBaseComponent & IgxDataBindable>) {
         const valueInTransactions = this.transactions.getAggregatedValue(rowID, true);
         const rowIndex = this.gridAPI.get_row_index_in_data(this.id, rowID);  // Get actual index in data
         const newValue = valueInTransactions ? valueInTransactions : this.gridAPI.get_all_data(this.id)[rowIndex];
@@ -4487,7 +4554,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
         return result;
     }
 
-    private get dataLength() {
+    protected get dataLength() {
         return this.transactions.enabled ? this.dataWithAddedInTransactionRows.length : this.gridAPI.get_all_data(this.id).length;
     }
 
