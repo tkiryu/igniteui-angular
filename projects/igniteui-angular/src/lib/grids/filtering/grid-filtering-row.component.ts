@@ -271,7 +271,6 @@ export class IgxGridFilteringRowComponent implements AfterViewInit {
             event.preventDefault();
             this.close();
         }
-        event.stopPropagation();
     }
 
     /**
@@ -417,13 +416,8 @@ export class IgxGridFilteringRowComponent implements AfterViewInit {
     public onConditionsChanged(eventArgs) {
         const value = (eventArgs.newSelection as IgxDropDownItemComponent).value;
         this.expression.condition = this.getCondition(value);
-        if (this.expression.condition.isUnary) {
-            // update grid's filtering on the next cycle to ensure the drop-down is closed
-            // if the drop-down is not closed this event handler will be invoked multiple times
-            requestAnimationFrame(() => this.unaryConditionChangedCallback());
-        } else {
-            requestAnimationFrame(() => this.conditionChangedCallback());
-        }
+        this.expression.condition.isUnary ? this.unaryConditionChangedCallback() :
+            this.conditionChangedCallback();
 
         if (this.input) {
             this.input.nativeElement.focus();
@@ -489,10 +483,7 @@ export class IgxGridFilteringRowComponent implements AfterViewInit {
         if (eventArgs.oldSelection) {
             expression.afterOperator = (eventArgs.newSelection as IgxDropDownItemComponent).value;
             this.expressionsList[this.expressionsList.indexOf(expression) + 1].beforeOperator = expression.afterOperator;
-
-            // update grid's filtering on the next cycle to ensure the drop-down is closed
-            // if the drop-down is not closed this event handler will be invoked multiple times
-            requestAnimationFrame(() => this.filter());
+            this.filter();
         }
     }
 

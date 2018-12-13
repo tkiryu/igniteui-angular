@@ -83,10 +83,6 @@ export class IgxFilteringService implements OnDestroy {
         if (!this.areEventsSubscribed) {
             this.areEventsSubscribed = true;
 
-            this.grid.onColumnResized.pipe(takeUntil(this.destroy$)).subscribe((eventArgs: IColumnResizeEventArgs) => {
-                this.updateFilteringCell(eventArgs.column);
-            });
-
             this.grid.parentVirtDir.onChunkLoad.pipe(takeUntil(this.destroy$)).subscribe((eventArgs: IForOfState) => {
                 if (eventArgs.startIndex !== this.columnStartIndex) {
                     this.columnStartIndex = eventArgs.startIndex;
@@ -98,12 +94,6 @@ export class IgxFilteringService implements OnDestroy {
                     this.focusFilterCellChip(this.columnToFocus, false);
                     this.columnToFocus = null;
                 }
-            });
-
-            this.grid.onColumnMovingEnd.pipe(takeUntil(this.destroy$)).subscribe((event) => {
-                this.grid.filterCellList.forEach((filterCell) => {
-                    filterCell.updateFilterCellArea();
-                });
             });
         }
     }
@@ -117,8 +107,7 @@ export class IgxFilteringService implements OnDestroy {
         const expressionsTree = this.createSimpleFilteringTree(field);
         this.grid.filter(field, null, expressionsTree);
 
-        // Wait for the change detection to update filtered data through the pipes and then emit the event.
-        requestAnimationFrame(() => this.grid.onFilteringDone.emit(expressionsTree));
+        this.grid.onFilteringDone.emit(expressionsTree);
 
         this.isFiltering = false;
     }
@@ -133,8 +122,7 @@ export class IgxFilteringService implements OnDestroy {
 
         const expr = this.grid.filteringExpressionsTree.find(field);
 
-        // Wait for the change detection to update filtered data through the pipes and then emit the event.
-        requestAnimationFrame(() => this.grid.onFilteringDone.emit(expr as FilteringExpressionsTree));
+        this.grid.onFilteringDone.emit(expr as FilteringExpressionsTree);
 
         const expressions = this.getExpressions(field);
         expressions.length = 0;

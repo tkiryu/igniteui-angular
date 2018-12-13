@@ -287,8 +287,8 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
             this._filteringExpressionsTree = filteringExpressionTreeClone;
 
             this.filteringService.refreshExpressions();
-            this.summaryService.clearSummaryCache();
-            this.markForCheck();
+            this.clearSummaryCache();
+            this.cdr.markForCheck();
         }
     }
 
