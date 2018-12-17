@@ -8,7 +8,8 @@ import {
     NgModule,
     OnInit,
     TemplateRef,
-    ViewChild
+    ViewChild,
+    ViewEncapsulation
 } from '@angular/core';
 import { IgxIconModule } from '../icon/index';
 
@@ -33,8 +34,10 @@ export enum Size {
  * ```
  */
 @Component({
+    encapsulation: ViewEncapsulation.None,
     selector: 'igx-avatar',
-    templateUrl: 'avatar.component.html'
+    templateUrl: 'avatar.component.html',
+    styleUrls: ['avatar.component.scss']
 })
 export class IgxAvatarComponent implements OnInit, AfterViewInit {
 

@@ -1,0 +1,7 @@
+@import '../core/styles/themes/utilities';
+@import '../core/styles/components/avatar/avatar-component';
+@import '../core/styles/components/avatar/avatar-theme';
+
+$igx-legacy-support: false;
+
+@include igx-avatar(igx-avatar-theme($default-palette, $light-schema));
