@@ -389,7 +389,7 @@ export class IgxGridCellComponent implements OnInit, AfterViewInit {
         if (colWidth && !isPercentageWidth) {
             let cellWidth = this.isLastUnpinned && hasVerticalScroll &&
             (this.grid.unpinnedWidth - this.grid.totalWidth < 0) ?
-                parseInt(colWidth, 10) - 18 + '' : colWidth;
+                parseInt(colWidth, 10) + '' : colWidth;
 
             if (typeof cellWidth !== 'string' || cellWidth.endsWith('px') === false) {
                 cellWidth += 'px';
