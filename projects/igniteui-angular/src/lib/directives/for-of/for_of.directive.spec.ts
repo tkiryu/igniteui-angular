@@ -264,6 +264,39 @@ describe('IgxForOf directive -', () => {
             rowsRendered = displayContainer.querySelectorAll('div');
             expect(rowsRendered.length).not.toBe(0);
         });
+
+    });
+    describe('variable row height component', () => {
+        configureTestSuite();
+        let fix: ComponentFixture<VariableRowHeightComponent>;
+
+        beforeEach(async(() => {
+            TestBed.configureTestingModule({
+                declarations: [
+                    TestIgxForOfDirective,
+                    VariableRowHeightComponent
+                ],
+                imports: [IgxForOfModule]
+            }).compileComponents();
+        }));
+
+        beforeEach(() => {
+            fix = TestBed.createComponent(VariableRowHeightComponent);
+            fix.componentInstance.data = dg.generateVerticalData(fix.componentInstance.cols);
+            fix.componentRef.hostView.detectChanges();
+            fix.detectChanges();
+            displayContainer = fix.nativeElement.querySelector('igx-display-container');
+            verticalScroller = fix.nativeElement.querySelector('igx-virtual-helper');
+            horizontalScroller = fix.nativeElement.querySelector('igx-horizontal-virtual-helper');
+        });
+
+        it('should recalculate and update cache when the container size changes', async () => {
+            expect(fix.componentInstance.parentVirtDir.getItemCountInView()).toEqual(3);
+            fix.componentInstance.height = '530px';
+            fix.detectChanges();
+            await wait(100);
+            expect(fix.componentInstance.parentVirtDir.getItemCountInView()).toEqual(5);
+        });
     });
 
     describe('vertical and horizontal virtual component', () => {
@@ -905,6 +938,7 @@ describe('IgxForOf directive -', () => {
 
             expect(chunkLoadSpy).toHaveBeenCalledTimes(2);
         });
+
     });
 
     describe('variable size component', () => {
@@ -955,6 +989,7 @@ describe('IgxForOf directive -', () => {
             // Has size and enough data to be virtualized - display container should be active.
             expect(displayContainerDebugEl[0].classes[INACTIVE_VIRT_CONTAINER]).toBe(false);
         });
+
     });
 
     describe('remote virtual component', () => {
@@ -1227,6 +1262,38 @@ export class VerticalVirtualComponent {
 
         this.parentVirtDir.testOnScroll(verticalScrollbar);
     }
+}
+@Component({
+    template: `
+        <div #container [style.width]='width' [style.height]='height'>
+        <ng-template #scrollContainer igxForTest let-rowData [igxForOf]="data"
+            [igxForScrollOrientation]="'vertical'"
+            [igxForContainerSize]='height'
+            [igxForItemSize]='"50px"'>
+            <div [style.display]="'flex'" [style.height]="'100px'">
+                <div [style.min-width]=cols[0].width>{{rowData['1']}}</div>
+                <div [style.min-width]=cols[1].width>{{rowData['2']}}</div>
+                <div [style.min-width]=cols[2].width>{{rowData['3']}}</div>
+            </div>
+        </ng-template>
+    </div>
+    `
+})
+export class VariableRowHeightComponent {
+
+    public width = '450px';
+    public height = '300px';
+    public cols = [
+        { field: '1', width: '70px' },
+        { field: '2', width: '70px' },
+        { field: '3', width: '70px' }
+    ];
+    public data = [];
+
+    @ViewChild('container') public container;
+
+    @ViewChild('scrollContainer', { read: TestIgxForOfDirective })
+    public parentVirtDir: TestIgxForOfDirective<any>;
 }
 
 /** Both vertically and horizontally virtualized component */

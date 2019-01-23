@@ -1028,6 +1028,9 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         const prevChunkSize = this.state.chunkSize;
         this.applyChunkSizeChange();
         this._recalcScrollBarSize();
+        requestAnimationFrame(() => {
+            this.recalcUpdateSizes();
+        });
         if (prevChunkSize !== this.state.chunkSize) {
             this.onChunkLoad.emit(this.state);
         }
