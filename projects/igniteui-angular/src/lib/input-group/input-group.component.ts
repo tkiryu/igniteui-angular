@@ -15,7 +15,7 @@ import {
 import { IgxHintDirective } from '../directives/hint/hint.directive';
 import { IgxInputDirective, IgxInputState } from '../directives/input/input.directive';
 import { IgxLabelDirective } from '../directives/label/label.directive';
-import { IgxPrefixDirective, IgxPrefixModule} from '../directives/prefix/prefix.directive';
+import { IgxPrefixDirective, IgxPrefixModule } from '../directives/prefix/prefix.directive';
 import { IgxSuffixDirective, IgxSuffixModule } from '../directives/suffix/suffix.directive';
 import { DisplayDensity, IDisplayDensityOptions, DisplayDensityToken, DisplayDensityBase } from '../core/displayDensity';
 import { IgxInputGroupBase } from './input-group.common';
@@ -263,20 +263,6 @@ export class IgxInputGroupComponent extends DisplayDensityBase implements IgxInp
     }
 
     /**
-     * Returns whether the `IgxInputGroupComponent` has hints.
-     * ```typescript
-     *@ViewChild("MyInputGroup")
-     *public inputGroup: IgxInputGroupComponent;
-     *ngAfterViewInit(){
-     *    let inputHints = this.inputGroup.hasHints;
-     *}
-     * ```
-     */
-    get hasHints() {
-        return this.hints.length > 0;
-    }
-
-    /**
      * Returns whether the `IgxInputGroupComponent` has border.
      * ```typescript
      *@ViewChild("MyInputGroup")
@@ -302,7 +288,7 @@ export class IgxInputGroupComponent extends DisplayDensityBase implements IgxInp
      * ```
      */
     public get isTypeLine(): boolean {
-        return  this._type === IgxInputGroupType.LINE;
+        return this._type === IgxInputGroupType.LINE;
     }
 
     /**
@@ -344,7 +330,7 @@ export class IgxInputGroupComponent extends DisplayDensityBase implements IgxInp
      * ```
      */
     get isTypeSearch() {
-        return  this._type === IgxInputGroupType.SEARCH;
+        return this._type === IgxInputGroupType.SEARCH;
     }
 
     get filled() {
@@ -361,7 +347,7 @@ export class IgxInputGroupComponent extends DisplayDensityBase implements IgxInp
  */
 @NgModule({
     declarations: [IgxInputGroupComponent, IgxHintDirective, IgxInputDirective, IgxLabelDirective],
-    exports: [IgxInputGroupComponent,  IgxHintDirective, IgxInputDirective, IgxLabelDirective, IgxPrefixDirective, IgxSuffixDirective],
+    exports: [IgxInputGroupComponent, IgxHintDirective, IgxInputDirective, IgxLabelDirective, IgxPrefixDirective, IgxSuffixDirective],
     imports: [CommonModule, IgxPrefixModule, IgxSuffixModule]
 })
 export class IgxInputGroupModule { }
