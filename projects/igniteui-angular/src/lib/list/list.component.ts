@@ -25,6 +25,7 @@ import {
     IgxListPanState,
     IgxListItemLeftPanningTemplateDirective,
     IgxListItemRightPanningTemplateDirective} from './list.common';
+import { IgxListNavigationDirective } from '../directives/list/list-navigation.directive';
 
 let NEXT_ID = 0;
 export interface IPanStateChangeEventArgs {
@@ -360,10 +361,10 @@ export class IgxListComponent implements IgxListBase {
 @NgModule({
     declarations: [IgxListComponent, IgxListItemComponent,
         IgxDataLoadingTemplateDirective, IgxEmptyListTemplateDirective,
-        IgxListItemLeftPanningTemplateDirective, IgxListItemRightPanningTemplateDirective],
+        IgxListItemLeftPanningTemplateDirective, IgxListItemRightPanningTemplateDirective, IgxListNavigationDirective],
     exports: [IgxListComponent, IgxListItemComponent,
         IgxDataLoadingTemplateDirective, IgxEmptyListTemplateDirective,
-        IgxListItemLeftPanningTemplateDirective, IgxListItemRightPanningTemplateDirective],
+        IgxListItemLeftPanningTemplateDirective, IgxListItemRightPanningTemplateDirective, IgxListNavigationDirective],
     imports: [CommonModule, IgxRippleModule]
 })
 export class IgxListModule {

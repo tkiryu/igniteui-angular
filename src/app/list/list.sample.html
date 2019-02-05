@@ -133,7 +133,25 @@
                 </igx-list>
             </div>
         </article>
-        
+
+        <article class="sample-column">
+            <h4 class="sample-title">Keyboard navigation in List</h4>
+            <div class="list-sample">
+                <igx-list igxListNavigation>
+                    <igx-list-item [isHeader]="true">Contacts</igx-list-item>
+                    <igx-list-item *ngFor="let navItem of navItems; let index = index">
+                        <div class="item">
+                            <igx-avatar [src]="navItem.avatar" roundShape="true"></igx-avatar>
+                            <div class="person">
+                                <p class="name">{{navItem.text}}</p>
+                                <span class="phone">{{navItem.phone}}</span>
+                            </div>
+                        </div>
+                    </igx-list-item>
+                </igx-list>
+            </div>
+        </article>
+
     </section>
 
 </div>
