@@ -14,6 +14,7 @@ import { FilteringStrategy } from './filtering-strategy';
 import { ITreeGridRecord } from '../grids/tree-grid';
 import { cloneValue, mergeObjects } from '../core/utils';
 import { Transaction, TransactionType, HierarchicalTransaction } from '../services/transaction/transaction';
+import { group } from '@angular/animations';
 
 /**
  * @hidden
@@ -71,8 +72,41 @@ export class DataUtil {
         if (state.expressions.length === 0) {
             return groupData.data;
         }
-        return this.restoreGroupsRecursive(groupData, 1, state.expressions.length, state.expansion, state.defaultExpanded, groupsRecords);
+        return this.restoreGroupsIterative(groupData, state);
+        //return this.restoreGroupsRecursive(groupData, 1, state.expressions.length, state.expansion, state.defaultExpanded, groupsRecords);
     }
+
+    private static restoreGroupsIterative(groupData: IGroupByResult, state: IGroupingState): any[] {
+        const metadata = groupData.metadata;
+        const data = groupData.data;
+        const result = [];
+        let chain: any[], added = [];
+        let i = 0, j, chainIndex = 0;
+        let pointer: IGroupByRecord;
+        for (i = 0; i < metadata.length;) {
+            chain = [metadata[i]];
+            chainIndex = 0;
+            let pointer = metadata[i].groupParent;
+            // break off if the parent is already added
+            while (pointer && added[chainIndex++] !== pointer) {
+                chain.push(pointer);
+                added.pop();
+                pointer = pointer.groupParent;
+            }
+            //
+            for (j = chain.length - 1; j >= 0; j--) {
+                result.push(chain[j]);
+                added.unshift(chain[j]);
+            }
+            added.shift();
+            //added.splice(0, added.length - chain.length + 1);
+            // add rows
+            result.push(...chain[0].records);
+            i += chain[0].records.length;
+        }
+        return result;
+    }
+
     private static restoreGroupsRecursive(
         groupData: IGroupByResult, level: number, depth: number,
         expansion: IGroupByExpandState[], defaultExpanded: boolean, groupsRecords): any[] {

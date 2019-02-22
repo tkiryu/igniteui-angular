@@ -14,7 +14,10 @@ export class GridGroupBySampleComponent implements OnInit {
     public data: Array<any>;
     public hideGroupedColumns = false;
     public columns: Array<any>;
-    public groupingExpressions: Array<ISortingExpression>;
+    public groupingExpressions: Array<ISortingExpression> = [
+        { fieldName: 'Country', dir: SortingDirection.Asc },
+        { fieldName: 'ContactTitle', dir: SortingDirection.Asc }
+    ]
     public summaryMode = 'rootLevelOnly';
     public summaryModes = [];
     constructor(@Inject(DisplayDensityToken) public displayDensityOptions: IDisplayDensityOptions) {}
