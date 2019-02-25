@@ -14,7 +14,6 @@ import { FilteringStrategy } from './filtering-strategy';
 import { ITreeGridRecord } from '../grids/tree-grid';
 import { cloneValue, mergeObjects } from '../core/utils';
 import { Transaction, TransactionType, HierarchicalTransaction } from '../services/transaction/transaction';
-import { group } from '@angular/animations';
 
 /**
  * @hidden
@@ -73,20 +72,21 @@ export class DataUtil {
             return groupData.data;
         }
         return this.restoreGroupsIterative(groupData, state);
-        //return this.restoreGroupsRecursive(groupData, 1, state.expressions.length, state.expansion, state.defaultExpanded, groupsRecords);
+        // return this.restoreGroupsRecursive(groupData, 1, state.expressions.length,
+        //      state.expansion, state.defaultExpanded, groupsRecords);
     }
 
     private static restoreGroupsIterative(groupData: IGroupByResult, state: IGroupingState): any[] {
         const metadata = groupData.metadata;
-        const data = groupData.data;
-        const result = [];
-        let chain: any[], added = [];
+        const result = [], added = [];
+        let chain: any[];
         let i = 0, j, chainIndex = 0;
         let pointer: IGroupByRecord;
+        let expanded: boolean;
         for (i = 0; i < metadata.length;) {
             chain = [metadata[i]];
             chainIndex = 0;
-            let pointer = metadata[i].groupParent;
+            pointer = metadata[i].groupParent;
             // break off if the parent is already added
             while (pointer && added[chainIndex++] !== pointer) {
                 chain.push(pointer);
@@ -97,12 +97,20 @@ export class DataUtil {
             for (j = chain.length - 1; j >= 0; j--) {
                 result.push(chain[j]);
                 added.unshift(chain[j]);
+                const hierarchy = this.getHierarchy(chain[j]);
+                const expandState: IGroupByExpandState = state.expansion.find((s) =>
+                    this.isHierarchyMatch(s.hierarchy || [{ fieldName: chain[j].expression.fieldName, value: chain[j].value }], hierarchy));
+                expanded = expandState ? expandState.expanded : state.defaultExpanded;
+                if (!expanded) {
+                    break;
+                }
             }
             added.shift();
-            //added.splice(0, added.length - chain.length + 1);
-            // add rows
-            result.push(...chain[0].records);
-            i += chain[0].records.length;
+            j = j < 0 ? 0 : j;
+            if (expanded) {
+                result.push(...chain[j].records);
+            }
+            i += chain[j].records.length;
         }
         return result;
     }
