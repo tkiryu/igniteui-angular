@@ -6,7 +6,9 @@ import {
     Output,
     EventEmitter,
     ChangeDetectorRef,
-    ViewChild
+    ViewChild,
+    Pipe,
+    PipeTransform
 } from '@angular/core';
 import { IgxColumnComponent } from '../../column.component';
 import { ExpressionUI } from '../grid-filtering.service';
@@ -256,5 +258,14 @@ export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit {
         }
 
         event.stopPropagation();
+    }
+}
+
+@Pipe({ name: 'customfilter' })
+export class IgxAutocompletePipeCustomFilter implements PipeTransform {
+    public transform(collection: any[], term) {
+        return (!term ? collection : collection.filter(item => {
+            return item.toString().toLowerCase().startsWith(term.toString().toLowerCase());
+        })).slice(0, 1000);
     }
 }

@@ -30,7 +30,7 @@
         [placeholder]="inputConditionsPlaceholder"
         autocomplete="off"
         [value]="getConditionName(expressionUI.expression.condition)"
-        [readonly]="true"
+        [readonly]="true" 
     />
 </igx-input-group>
 
@@ -42,7 +42,7 @@
     (onOpening)="onDropdownValuesOpening()"
     (onOpened)="onDropdownValuesOpened()"
     (onClosed)="onDropdownClosed()">
-    <igx-drop-down-item *ngFor="let filterItem of valuesData" [value]="filterItem" [selected]="isValueSelected(filterItem)">
+    <igx-drop-down-item *ngFor="let filterItem of valuesData | customfilter:expressionUI.expression.searchVal" [value]="filterItem" [selected]="isValueSelected(filterItem)">
         <span>
             {{ column.formatter ? column.formatter(filterItem) : column.dataType === 'number' ? (filterItem | igxdecimal: column.grid.locale) : filterItem }}
         </span>
@@ -57,7 +57,7 @@
         [placeholder]="inputValuePlaceholder"
         [disabled]="expressionUI.expression.condition && expressionUI.expression.condition.isUnary"
         autocomplete="off"
-        [igxDropDownItemNavigation]="dropdownValues"
+        [igxAutocomplete]="dropdownValues"
         (keydown)="onInputValuesKeydown($event)"
         [(ngModel)]="expressionUI.expression.searchVal"
     />

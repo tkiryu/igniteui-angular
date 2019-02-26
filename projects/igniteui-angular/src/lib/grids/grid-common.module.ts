@@ -76,14 +76,18 @@ import { IgxExcelStyleSortingComponent } from './filtering/excel-style/excel-sty
 import { IgxExcelStyleColumnMovingComponent } from './filtering/excel-style/excel-style-column-moving.component';
 import { IgxExcelStyleSearchComponent } from './filtering/excel-style/excel-style-search.component';
 import { IgxExcelStyleCustomDialogComponent } from './filtering/excel-style/excel-style-custom-dialog.component';
-import { IgxExcelStyleDefaultExpressionComponent } from './filtering/excel-style/excel-style-default-expression.component';
+import {
+    IgxExcelStyleDefaultExpressionComponent,
+    IgxAutocompletePipeCustomFilter } from './filtering/excel-style/excel-style-default-expression.component';
 import { IgxExcelStyleDateExpressionComponent } from './filtering/excel-style/excel-style-date-expression.component';
+import { IgxAutocompleteModule } from '../directives/autocomplete/autocomplete.directive';
 
 /**
  * @hidden
  */
 @NgModule({
     declarations: [
+        IgxAutocompletePipeCustomFilter,
         IgxGridCellComponent,
         IgxColumnComponent,
         IgxColumnGroupComponent,
@@ -171,6 +175,7 @@ import { IgxExcelStyleDateExpressionComponent } from './filtering/excel-style/ex
         IgxColumnHidingModule,
         IgxDropDownModule,
         IgxButtonGroupModule,
+        IgxAutocompleteModule,
         IgxColumnPinningModule,
         IgxProgressBarModule,
         IgxGridFilteringCellComponent,
@@ -205,6 +210,7 @@ import { IgxExcelStyleDateExpressionComponent } from './filtering/excel-style/ex
         IgxChipsModule,
         IgxDragDropModule,
         IgxColumnHidingModule,
+        IgxAutocompleteModule,
         IgxDropDownModule,
         IgxButtonGroupModule,
         IgxColumnPinningModule,
