@@ -8,7 +8,8 @@ import {
     ChangeDetectorRef,
     ViewChild,
     Pipe,
-    PipeTransform
+    PipeTransform,
+    OnInit
 } from '@angular/core';
 import { IgxColumnComponent } from '../../column.component';
 import { ExpressionUI } from '../grid-filtering.service';
@@ -18,10 +19,12 @@ import { IgxInputGroupComponent, IgxInputDirective } from '../../../input-group'
 import { DataType } from '../../../data-operations/data-util';
 import { IFilteringOperation } from '../../../data-operations/filtering-condition';
 import { OverlaySettings, ConnectedPositioningStrategy, CloseScrollStrategy } from '../../../services';
+import { IgxAutocompleteDirective } from '../../../directives/autocomplete/autocomplete.directive';
 import { KEYS } from '../../../core/utils';
 import { FilteringLogic } from '../../../data-operations/filtering-expression.interface';
 import { IgxGridBaseComponent } from '../../grid';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 /**
  * @hidden
@@ -40,7 +43,7 @@ export interface ILogicOperatorChangedArgs {
     selector: 'igx-excel-style-default-expression',
     templateUrl: './excel-style-default-expression.component.html'
 })
-export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit {
+export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit, OnInit {
 
     private _dropDownOverlaySettings: OverlaySettings = {
         closeOnOutsideClick: true,
@@ -92,13 +95,15 @@ export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit {
     @ViewChild('logicOperatorButtonGroup', { read: IgxButtonGroupComponent })
     private logicOperatorButtonGroup: IgxButtonGroupComponent;
 
+    @ViewChild(IgxAutocompleteDirective) private autocomplete: IgxAutocompleteDirective;
+
     protected get inputValuesElement() {
         return this.inputValuesDirective;
     }
 
     public acPage = 100;
     public filteredItems = 0;
-
+    public fakeSearchExpression = new Subject<string>();
     get isLast(): boolean {
         return this.expressionsList[this.expressionsList.length - 1] === this.expressionUI;
     }
@@ -148,7 +153,6 @@ export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit {
             this.focus();
         }
     }
-
     public onDropdownValuesOpening() {
         this._isDropdownValuesOpening = true;
 
@@ -267,6 +271,14 @@ export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit {
         }
 
         event.stopPropagation();
+    }
+    ngOnInit() {
+        this.fakeSearchExpression
+        .pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe((value) => {
+            this.expressionUI.expression.searchVal = value;
+            this.autocomplete.open();
+        });
     }
 }
 
