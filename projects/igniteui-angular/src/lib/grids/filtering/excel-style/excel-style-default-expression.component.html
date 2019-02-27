@@ -33,7 +33,6 @@
         [readonly]="true" 
     />
 </igx-input-group>
-
 <igx-drop-down 
     #dropdownValues 
     [maxHeight]="'200px'"
@@ -42,10 +41,14 @@
     (onOpening)="onDropdownValuesOpening()"
     (onOpened)="onDropdownValuesOpened()"
     (onClosed)="onDropdownClosed()">
-    <igx-drop-down-item *ngFor="let filterItem of valuesData | customfilter:expressionUI.expression.searchVal" [value]="filterItem" [selected]="isValueSelected(filterItem)">
+    <igx-drop-down-item *ngFor="let filterItem of valuesData | customfilter:expressionUI.expression.searchVal:acPage" [value]="filterItem">
         <span>
             {{ column.formatter ? column.formatter(filterItem) : column.dataType === 'number' ? (filterItem | igxdecimal: column.grid.locale) : filterItem }}
         </span>
+    </igx-drop-down-item>
+    <igx-drop-down-item (mousedown)='loadMore($event)'
+    *ngIf="(valuesData | customfilter:expressionUI.expression.searchVal:acPage).length < (valuesData | customfilter:expressionUI.expression.searchVal:acPage:true).length">
+        <span>Load more...</span>
     </igx-drop-down-item>
 </igx-drop-down>
 

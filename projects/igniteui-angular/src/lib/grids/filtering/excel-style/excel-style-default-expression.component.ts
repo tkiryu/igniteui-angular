@@ -13,7 +13,7 @@ import {
 import { IgxColumnComponent } from '../../column.component';
 import { ExpressionUI } from '../grid-filtering.service';
 import { IgxButtonGroupComponent } from '../../../buttonGroup/buttonGroup.component';
-import { IgxDropDownComponent, IgxDropDownItemComponent } from '../../../drop-down';
+import { IgxDropDownComponent, IgxDropDownItemComponent, ISelectionEventArgs } from '../../../drop-down';
 import { IgxInputGroupComponent, IgxInputDirective } from '../../../input-group';
 import { DataType } from '../../../data-operations/data-util';
 import { IFilteringOperation } from '../../../data-operations/filtering-condition';
@@ -21,6 +21,7 @@ import { OverlaySettings, ConnectedPositioningStrategy, CloseScrollStrategy } fr
 import { KEYS } from '../../../core/utils';
 import { FilteringLogic } from '../../../data-operations/filtering-expression.interface';
 import { IgxGridBaseComponent } from '../../grid';
+import { Observable } from 'rxjs';
 
 /**
  * @hidden
@@ -95,6 +96,9 @@ export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit {
         return this.inputValuesDirective;
     }
 
+    public acPage = 100;
+    public filteredItems = 0;
+
     get isLast(): boolean {
         return this.expressionsList[this.expressionsList.length - 1] === this.expressionUI;
     }
@@ -130,12 +134,17 @@ export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit {
         // datepicker's input group is not yet fully initialized
         requestAnimationFrame(() => this.inputValuesElement.focus());
     }
-
-    public onValuesChanged(eventArgs: any) {
+    public loadMore(event: any) {
+        if (event.cancelable) {
+            event.cancel = true;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this.acPage += 100;
+        this.dropdownValues.selectItem(event.target);
+    }
+    public onValuesChanged(eventArgs: ISelectionEventArgs) {
         if (!this._isDropdownValuesOpening) {
-            const value = (eventArgs.newSelection as IgxDropDownItemComponent).value;
-            this.expressionUI.expression.searchVal = value;
-
             this.focus();
         }
     }
@@ -263,9 +272,13 @@ export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit {
 
 @Pipe({ name: 'customfilter' })
 export class IgxAutocompletePipeCustomFilter implements PipeTransform {
-    public transform(collection: any[], term) {
-        return (!term ? collection : collection.filter(item => {
+    public transform(collection: any[], term, page, returnFilterCount) {
+        const result: any[] = (!term ? collection : collection.filter(item => {
             return item.toString().toLowerCase().startsWith(term.toString().toLowerCase());
-        })).slice(0, 1000);
+        }));
+        if (returnFilterCount) {
+            return result;
+        }
+        return result.slice(0, page);
     }
 }
