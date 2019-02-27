@@ -4726,6 +4726,7 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
         if (currentCell && event) {
             currentCell.nativeElement.focus();
         }
+        this.cdr.reattach();
     }
     /**
      * @hidden

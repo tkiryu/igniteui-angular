@@ -711,6 +711,8 @@ export class IgxColumnComponent implements AfterContentInit {
                 }
             }).reduce((a, b) => a.concat(b), []);
     }
+
+    private _visibleIndex = null;
     /**
      * Gets the column visible index.
      * If the column is not visible, returns `-1`.
@@ -720,6 +722,9 @@ export class IgxColumnComponent implements AfterContentInit {
      * @memberof IgxColumnComponent
      */
     get visibleIndex(): number {
+        if (this._visibleIndex !== null) {
+            return this._visibleIndex;
+        }
         const unpinnedColumns = this.grid.unpinnedColumns.filter(c => !c.columnGroup);
         const pinnedColumns = this.grid.pinnedColumns.filter(c => !c.columnGroup);
         let col = this;
@@ -735,6 +740,7 @@ export class IgxColumnComponent implements AfterContentInit {
         } else {
             vIndex = pinnedColumns.indexOf(col);
         }
+        this._visibleIndex = vIndex;
         return vIndex;
     }
     /**
@@ -1217,10 +1223,15 @@ export class IgxColumnComponent implements AfterContentInit {
         }
     }
 
+    private _cellWidth = null;
+
     /**
      *@hidden
      */
     public getCellWidth() {
+        if (this._cellWidth !== null) {
+            return this._cellWidth;
+        }
         const hasVerticalScroll = !this.grid.verticalScrollContainer.dc.instance.notVirtual;
         const colWidth = this.width;
         const isPercentageWidth = colWidth && typeof colWidth === 'string' && colWidth.indexOf('%') !== -1;
@@ -1234,9 +1245,10 @@ export class IgxColumnComponent implements AfterContentInit {
             if (typeof cellWidth !== 'string' || cellWidth.endsWith('px') === false) {
                 cellWidth += 'px';
             }
-
+            this._cellWidth = cellWidth;
             return cellWidth;
         } else {
+            this._cellWidth = colWidth;
             return colWidth;
         }
     }

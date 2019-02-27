@@ -654,6 +654,7 @@ export class IgxGridCellComponent implements OnInit, OnChanges {
     public onDoubleClick(event) {
         if (this.column.editable) {
             this.inEditMode = true;
+            this.grid.cdr.detach();
         }
 
         this.grid.onDoubleClick.emit({
