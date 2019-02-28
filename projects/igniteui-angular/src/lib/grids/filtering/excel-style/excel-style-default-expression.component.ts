@@ -277,7 +277,6 @@ export class IgxExcelStyleDefaultExpressionComponent implements AfterViewInit, O
         .pipe(debounceTime(300), distinctUntilChanged())
         .subscribe((value) => {
             this.expressionUI.expression.searchVal = value;
-            this.autocomplete.open();
         });
     }
 }

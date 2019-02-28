@@ -61,7 +61,6 @@
         [disabled]="expressionUI.expression.condition && expressionUI.expression.condition.isUnary"
         autocomplete="off"
         [igxAutocomplete]="dropdownValues"
-        [igxAutocompleteDisabled]="true"
         (keydown)="onInputValuesKeydown($event)"
         [ngModel]="expressionUI.expression.searchVal"
         (ngModelChange)="fakeSearchExpression.next($event)"
