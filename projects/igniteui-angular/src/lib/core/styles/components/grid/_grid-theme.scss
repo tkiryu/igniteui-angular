@@ -543,7 +543,7 @@
         display: flex;
         background: --var($theme, 'header-background');
         color: --var($theme, 'header-text-color');
-        overflow: hidden;
+        overflow: visible;
 
         %grid-row {
             position: relative;
@@ -696,6 +696,7 @@
     }
 
     %grid-thead-thumb {
+        z-index: 2;
         background: --var($theme, 'header-background');
         border-left: 1px solid igx-color($palette, 'grays', 300);
     }
@@ -1161,7 +1162,7 @@
     }
 
     %grid__resize-line {
-        position: fixed;
+        position: absolute;
         cursor: col-resize;
         width: 4px;
         background-color: --var($theme, 'resize-line-color');
