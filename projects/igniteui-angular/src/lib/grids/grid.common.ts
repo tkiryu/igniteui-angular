@@ -67,14 +67,18 @@ export class IgxColumnResizerDirective implements OnInit, OnDestroy {
                 takeUntil(this._destroy)
             ))
         ).subscribe((pos) => {
+
             const left = this._left + pos;
 
-            this.left = left < this.restrictHResizeMin ? this.restrictHResizeMin + 'px' : left + 'px';
+            const min = this._left - this.restrictHResizeMin;
+            const max = this._left + this.restrictHResizeMax;
 
-            if (left > this.restrictHResizeMax) {
-                this.left = this.restrictHResizeMax + 'px';
-            } else if (left > this.restrictHResizeMin) {
-                this.left = left + 'px';
+            this.left = left < min ? min : left;
+
+            if (left > max) {
+                this.left = max;
+            } else if (left > max) {
+                this.left = left;
             }
         });
 
@@ -101,7 +105,7 @@ export class IgxColumnResizerDirective implements OnInit, OnDestroy {
     }
 
     public set left(val) {
-        requestAnimationFrame(() => this.element.nativeElement.style.left = val);
+        requestAnimationFrame(() => this.element.nativeElement.style.left = val + 'px');
     }
 
     onMouseup(event) {
@@ -362,21 +366,24 @@ export class IgxColumnMovingDragDirective extends IgxDragDirective {
         icon.classList.add('material-icons');
         this.cms.icon = icon;
 
+        const hostElemLeft = this.dragGhostHost ? this.dragGhostHost.getBoundingClientRect().left : 0;
+        const hostElemTop = this.dragGhostHost ? this.dragGhostHost.getBoundingClientRect().top : 0;
+
         if (!this.column.columnGroup) {
             this.renderer.addClass(icon, this._dragGhostImgIconClass);
 
             this._dragGhost.insertBefore(icon, this._dragGhost.firstElementChild);
 
-            this.left = this._dragStartX = pageX - ((this._dragGhost.getBoundingClientRect().width / 3) * 2);
-            this.top = this._dragStartY = pageY - ((this._dragGhost.getBoundingClientRect().height / 3) * 2);
+            this.left = this._dragStartX = pageX - ((this._dragGhost.getBoundingClientRect().width / 3) * 2) - hostElemLeft;
+            this.top = this._dragStartY = pageY - ((this._dragGhost.getBoundingClientRect().height / 3) * 2) - hostElemTop;
         } else {
             this._dragGhost.insertBefore(icon, this._dragGhost.childNodes[0]);
 
             this.renderer.addClass(icon, this._dragGhostImgIconGroupClass);
             this._dragGhost.children[0].style.paddingLeft = '0px';
 
-            this.left = this._dragStartX = pageX - ((this._dragGhost.getBoundingClientRect().width / 3) * 2);
-            this.top = this._dragStartY = pageY - ((this._dragGhost.getBoundingClientRect().height / 3) * 2);
+            this.left = this._dragStartX = pageX - ((this._dragGhost.getBoundingClientRect().width / 3) * 2) - hostElemLeft;
+            this.top = this._dragStartY = pageY - ((this._dragGhost.getBoundingClientRect().height / 3) * 2) - hostElemTop;
         }
     }
 }
@@ -403,7 +410,7 @@ export class IgxColumnMovingDropDirective extends IgxDropDirective implements On
     }
 
     get isDropTarget(): boolean {
-        return this._column && this._column.grid.hasMovableColumns && this.cms.column.movable;
+        return this._column && this._column.grid.hasMovableColumns && this.cms.column.movable && !this.cms.column.disablePinning;
     }
 
     get horizontalScroll(): any {
