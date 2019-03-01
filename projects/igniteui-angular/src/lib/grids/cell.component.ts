@@ -363,10 +363,10 @@ export class IgxGridCellComponent implements OnInit, OnChanges {
      * ```
      * @memberof IgxGridCellComponent
      */
-    @HostBinding('class')
-    get styleClasses(): string {
-        return this.resolveStyleClasses();
-    }
+   // @HostBinding('class')
+   // get styleClasses(): string {
+   //     return this.resolveStyleClasses();
+   // }
 
     /**
      * Gets the width of the cell.
@@ -377,7 +377,7 @@ export class IgxGridCellComponent implements OnInit, OnChanges {
      */
     @HostBinding('style.min-width')
     @HostBinding('style.max-width')
-    @HostBinding('style.flex-basis')
+   // @HostBinding('style.flex-basis')
     get width() {
         return this.column.getCellWidth();
     }

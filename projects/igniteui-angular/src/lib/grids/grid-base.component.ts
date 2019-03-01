@@ -3760,8 +3760,13 @@ export abstract class IgxGridBaseComponent extends DisplayDensityBase implements
         return height;
     }
 
+    private _theadHeight = 0;
     public get headerHeight() {
-       return this.theadRow ? this.theadRow.nativeElement.clientHeight : 0;
+        if (this._theadHeight !== 0 && this.theadRow) {
+            return this._theadHeight;
+        }
+        this._theadHeight = this.theadRow ? this.theadRow.nativeElement.clientHeight : 0;
+        return this._theadHeight;
     }
 
     public get outerWidth() {
