@@ -1,14 +1,14 @@
 import { IgxInputDirective } from './../directives/input/input.directive';
 import {
     Component, ContentChildren, forwardRef, QueryList, ViewChild, Input, ContentChild,
-    AfterContentInit, HostBinding, Directive, TemplateRef, ElementRef, ChangeDetectorRef
+    AfterContentInit, HostBinding, Directive, TemplateRef, ElementRef, ChangeDetectorRef, ViewContainerRef, Inject
 } from '@angular/core';
 import {  ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import { IgxDropDownItemBase} from '../drop-down/index';
 import { IgxInputGroupComponent } from '../input-group/input-group.component';
 
-import { IgxDropDownComponent } from './../drop-down/drop-down.component';
+import { IgxDropDownComponent, DROP_DOWN_SCROLL_STRATEGY } from './../drop-down/drop-down.component';
 import { IgxSelectItemComponent } from './select-item.component';
 import { SelectPositioningStrategy } from './select-positioning-strategy';
 
@@ -193,8 +193,10 @@ export class IgxSelectComponent extends IgxDropDownComponent implements IgxSelec
     constructor(
         protected elementRef: ElementRef,
         protected cdr: ChangeDetectorRef,
-        protected selection: IgxSelectionAPIService) {
-        super(elementRef, cdr, selection);
+        protected selection: IgxSelectionAPIService,
+        protected viewContainerRef: ViewContainerRef,
+        @Inject(DROP_DOWN_SCROLL_STRATEGY) scrollStrategy: any) {
+        super(elementRef, cdr, selection, viewContainerRef, scrollStrategy);
     }
 
     /** @hidden @internal */

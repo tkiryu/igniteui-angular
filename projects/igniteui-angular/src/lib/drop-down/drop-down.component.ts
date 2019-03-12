@@ -12,6 +12,11 @@ import {
     ViewChild,
     EventEmitter,
     Output,
+    TemplateRef,
+    InjectionToken,
+    ViewContainerRef,
+    Inject,
+    Optional,
 } from '@angular/core';
 import { IgxToggleDirective } from '../directives/toggle/toggle.directive';
 import { IgxDropDownItemComponent } from './drop-down-item.component';
@@ -21,9 +26,31 @@ import { IGX_DROPDOWN_BASE, IDropDownBase } from './drop-down.common';
 import { ISelectionEventArgs, Navigate } from './drop-down.common';
 import { CancelableEventArgs, CancelableBrowserEventArgs, isIE } from '../core/utils';
 import { IgxSelectionAPIService } from '../core/selection';
-import { Subject } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 import { IgxDropDownItemBase } from './drop-down-item.base';
 import { OverlaySettings } from '../services';
+import { TemplatePortal } from '@angular/cdk/portal/index';
+import { Overlay, ScrollStrategy, OverlayRef } from '@angular/cdk/overlay';
+
+/** Injection token that determines the scroll handling while the menu is open. */
+export const DROP_DOWN_SCROLL_STRATEGY =
+    new InjectionToken<() => ScrollStrategy>('ig-drop-down-component-scroll-strategy');
+
+/** @docs-private */
+export function DROP_DOWN_SCROLL_STRATEGY_FACTORY(overlay: Overlay): () => ScrollStrategy {
+    return () => overlay.scrollStrategies.reposition();
+}
+
+/** @docs-private */
+export const DROP_DOWN_SCROLL_STRATEGY_FACTORY_PROVIDER = {
+    provide: DROP_DOWN_SCROLL_STRATEGY,
+    deps: [Overlay],
+    useFactory: DROP_DOWN_SCROLL_STRATEGY_FACTORY,
+};
+
+
+/** Default top padding of the menu panel. */
+export const DROP_DOWN_TOP_PADDING = 8;
 
 
 /**
@@ -48,10 +75,22 @@ import { OverlaySettings } from '../services';
     providers: [{ provide: IGX_DROPDOWN_BASE, useExisting: IgxDropDownComponent }]
 })
 export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBase, OnInit, OnDestroy {
+    private _portal: TemplatePortal;
+    private _overlayRef: OverlayRef | null = null;
+    private _menuOpen: boolean = false;
+    private _closingActionsSubscription = Subscription.EMPTY;
+    private _hoverSubscription = Subscription.EMPTY;
+    private _menuCloseSubscription = Subscription.EMPTY;
+    private _scrollStrategy: () => ScrollStrategy;
+
+
     protected destroy$ = new Subject<boolean>();
 
     @ViewChild(IgxToggleDirective)
     protected toggleDirective: IgxToggleDirective;
+
+    @ViewChild('templateRef')
+    private templateRef: TemplateRef<any>;
 
     /**
      * @hidden
@@ -171,10 +210,13 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
     }
 
     constructor(
-        protected elementRef: ElementRef,
+        protected elementRef: ElementRef<HTMLElement>,
         protected cdr: ChangeDetectorRef,
-        protected selection: IgxSelectionAPIService) {
+        protected selection: IgxSelectionAPIService,
+        protected viewContainerRef: ViewContainerRef,
+        @Inject(DROP_DOWN_SCROLL_STRATEGY) scrollStrategy: any) {
         super(elementRef, cdr);
+        this._scrollStrategy = scrollStrategy;
     }
 
     /**
@@ -185,6 +227,7 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
      * ```
      */
     public open(overlaySettings?: OverlaySettings) {
+        overlaySettings.templateRef = this.templateRef;
         this.toggleDirective.open(overlaySettings);
     }
 
@@ -208,6 +251,7 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
      */
     public toggle(overlaySettings?: OverlaySettings) {
         if (this.collapsed || this.toggleDirective.isClosing) {
+            overlaySettings.templateRef = this.templateRef;
             this.open(overlaySettings);
         } else {
             this.close();

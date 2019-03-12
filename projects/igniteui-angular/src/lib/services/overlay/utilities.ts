@@ -2,7 +2,7 @@ import { IPositionStrategy } from './position/IPositionStrategy';
 
 import { IScrollStrategy } from './scroll';
 import { AnimationReferenceMetadata, AnimationPlayer } from '@angular/animations';
-import { ComponentRef, ElementRef } from '@angular/core';
+import { ComponentRef, ElementRef, TemplateRef } from '@angular/core';
 import { IgxOverlayOutletDirective } from '../../directives/toggle/toggle.directive';
 import { CancelableEventArgs, CancelableBrowserEventArgs, cloneValue } from '../../core/utils';
 
@@ -24,7 +24,7 @@ export class Point {
 
 export interface PositionSettings {
     /** Attaching target for the component to show */
-    target?: Point | HTMLElement;
+    target?: Point | HTMLElement | ElementRef;
     /** Direction in which the component should show */
     horizontalDirection?: HorizontalAlignment;
     /** Direction in which the component should show */
@@ -57,6 +57,7 @@ export interface OverlaySettings {
      * Exclude the position strategy target for outside clicks
      */
     excludePositionTarget?: boolean;
+    templateRef?: TemplateRef<any>;
 }
 
 export interface OverlayEventArgs {

@@ -139,7 +139,7 @@ export class DropDownSampleComponent implements OnInit {
             outlet: this.igxOverlayOutlet
         };
 
-        overlaySettings.positionStrategy.settings.target = this.button.nativeElement;
+        overlaySettings.positionStrategy.settings.target = this.button;
         this.igxDropDown.open(overlaySettings);
     }
 

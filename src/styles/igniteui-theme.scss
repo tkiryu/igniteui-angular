@@ -2,6 +2,8 @@
 @import url('https://fonts.googleapis.com/css?family=Titillium+Web:300,400,600,700');
 @import '../../projects/igniteui-angular/src/lib/core/styles/themes/index';
 
+@import '~@angular/cdk/overlay-prebuilt.css';
+
 @import 'mixins';
 @import 'app-palettes';
 @import 'app-layout';

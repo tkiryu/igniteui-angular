@@ -1,5 +1,5 @@
 import {
-    ChangeDetectorRef, Component, ContentChild, ElementRef, forwardRef, Inject, QueryList, OnDestroy, AfterViewInit, ContentChildren
+    ChangeDetectorRef, Component, ContentChild, ElementRef, forwardRef, Inject, QueryList, OnDestroy, AfterViewInit, ContentChildren, ViewContainerRef
 } from '@angular/core';
 import { takeUntil, take } from 'rxjs/operators';
 import { IgxForOfDirective } from '../directives/for-of/for_of.directive';
@@ -7,7 +7,7 @@ import { CancelableBrowserEventArgs } from '../core/utils';
 import { IgxComboBase, IGX_COMBO_COMPONENT } from './combo.common';
 import { Navigate } from '../drop-down/drop-down.common';
 import { IDropDownBase, IGX_DROPDOWN_BASE } from '../drop-down/drop-down.common';
-import { IgxDropDownComponent } from '../drop-down/drop-down.component';
+import { IgxDropDownComponent, DROP_DOWN_SCROLL_STRATEGY } from '../drop-down/drop-down.component';
 import { DropDownActionKey } from '../drop-down/drop-down.common';
 import { IgxComboAddItemComponent } from './combo-add-item.component';
 import { IgxComboAPIService } from './combo.api';
@@ -26,9 +26,11 @@ export class IgxComboDropDownComponent extends IgxDropDownComponent implements I
         protected elementRef: ElementRef,
         protected cdr: ChangeDetectorRef,
         protected selection: IgxSelectionAPIService,
+        protected viewContainerRef: ViewContainerRef,
+        @Inject(DROP_DOWN_SCROLL_STRATEGY) scrollStrategy: any,
         @Inject(IGX_COMBO_COMPONENT) public combo: IgxComboBase,
         protected comboAPI: IgxComboAPIService) {
-        super(elementRef, cdr, selection);
+        super(elementRef, cdr, selection, viewContainerRef, scrollStrategy);
     }
 
     protected get scrollContainer() {

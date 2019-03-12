@@ -14,7 +14,8 @@ import {
     Optional,
     Output,
     ViewChild,
-    AfterContentInit
+    AfterContentInit,
+    TemplateRef
 } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -358,6 +359,9 @@ export class IgxDialogComponent implements IToggleView, OnInit, OnDestroy, After
         return this._titleId;
     }
 
+    @ViewChild('templateRef')
+    private templateRef: TemplateRef<any>;
+
     constructor(
         private elementRef: ElementRef,
         @Optional() private navService: IgxNavigationService
@@ -390,6 +394,7 @@ export class IgxDialogComponent implements IToggleView, OnInit, OnDestroy, After
      */
     public open(overlaySettings: OverlaySettings = this._overlayDefaultSettings) {
         this.toggleRef.open(overlaySettings);
+        overlaySettings.templateRef = this.templateRef;
         this.onOpen.emit({ dialog: this, event: null });
     }
 

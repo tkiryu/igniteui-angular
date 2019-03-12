@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { IgxDropDownComponent } from './drop-down.component';
+import { IgxDropDownComponent, DROP_DOWN_SCROLL_STRATEGY_FACTORY_PROVIDER } from './drop-down.component';
 import { IgxDropDownItemComponent } from './drop-down-item.component';
 import { IgxDropDownItemNavigationDirective } from './drop-down-navigation.directive';
 import { CommonModule } from '@angular/common';
@@ -9,7 +9,7 @@ import { IgxDropDownGroupComponent } from './drop-down-group.component';
 
 export * from './drop-down.component';
 export * from './drop-down-item.component';
-export { ISelectionEventArgs, IDropDownNavigationDirective,  } from './drop-down.common';
+export { ISelectionEventArgs, IDropDownNavigationDirective, } from './drop-down.common';
 export * from './drop-down-navigation.directive';
 export * from './drop-down.base';
 export * from './drop-down-item.base';
@@ -22,6 +22,6 @@ export * from './drop-down-group.component';
     declarations: [IgxDropDownComponent, IgxDropDownItemComponent, IgxDropDownGroupComponent, IgxDropDownItemNavigationDirective],
     exports: [IgxDropDownComponent, IgxDropDownItemComponent, IgxDropDownGroupComponent, IgxDropDownItemNavigationDirective],
     imports: [CommonModule, IgxToggleModule],
-    providers: [IgxSelectionAPIService]
+    providers: [IgxSelectionAPIService, DROP_DOWN_SCROLL_STRATEGY_FACTORY_PROVIDER]
 })
 export class IgxDropDownModule { }

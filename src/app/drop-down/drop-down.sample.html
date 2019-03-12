@@ -12,7 +12,7 @@
                 [igxDropDownItemNavigation]="dropdown1" style="display: block">Toggle
                 dropdown</button>
         </div>
-        <igx-drop-down #dropdown1 (onSelection)="onSelection($event)" (onOpening)="onOpening($event)">
+        <igx-drop-down pesho_e_tuk #dropdown1 (onSelection)="onSelection($event)" (onOpening)="onOpening($event)">
             <igx-drop-down-item *ngFor="let item of items" [disabled]="item.disabled" [isHeader]="item.header"
                 [selected]="item.selected">
                 <div class="igx-drop-down__item-template">

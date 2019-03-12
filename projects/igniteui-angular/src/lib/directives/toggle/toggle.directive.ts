@@ -11,16 +11,20 @@ import {
     OnInit,
     Optional,
     Output,
-    Inject
+    Inject,
+    TemplateRef,
+    ViewContainerRef
 } from '@angular/core';
+import { Overlay, OverlayConfig, ScrollStrategy } from '@angular/cdk/overlay';
 import { IgxNavigationService, IToggleView } from '../../core/navigation';
 import { IgxOverlayService } from '../../services/overlay/overlay';
 import { OverlaySettings, OverlayEventArgs, ConnectedPositioningStrategy, AbsoluteScrollStrategy, IPositionStrategy } from '../../services';
 import { filter, takeUntil } from 'rxjs/operators';
-import { Subscription, Subject, MonoTypeOperatorFunction } from 'rxjs';
+import { Subscription, Subject, MonoTypeOperatorFunction, from } from 'rxjs';
 import { OverlayClosingEventArgs } from '../../services/overlay/utilities';
 import { CancelableEventArgs, CancelableBrowserEventArgs } from '../../core/utils';
 import { DeprecateProperty } from '../../core/deprecateDecorators';
+import { CdkPortal, TemplatePortal } from '@angular/cdk/portal';
 
 @Directive({
     exportAs: 'toggle',
@@ -160,8 +164,11 @@ export class IgxToggleDirective implements IToggleView, OnInit, OnDestroy {
      */
     constructor(
         private elementRef: ElementRef,
+        // public templateRef: TemplateRef<any>,
+        public viewContainerRef: ViewContainerRef,
         private cdr: ChangeDetectorRef,
         @Inject(IgxOverlayService) protected overlayService: IgxOverlayService,
+        public angularOverlay: Overlay,
         @Optional() private navigationService: IgxNavigationService) {
     }
 
@@ -175,54 +182,75 @@ export class IgxToggleDirective implements IToggleView, OnInit, OnDestroy {
     public open(overlaySettings?: OverlaySettings) {
         //  if there is open animation do nothing
         //  if toggle is not collapsed and there is no close animation do nothing
-        const info = this.overlayService.getOverlayById(this._overlayId);
-        const hasOpenAnimation = info ? info.openAnimationPlayer : false;
-        const hasCloseAnimation = info ? info.closeAnimationPlayer : false;
-        if (hasOpenAnimation || !(this._collapsed || hasCloseAnimation)) {
-            return;
-        }
+        // const info = this.overlayService.getOverlayById(this._overlayId);
+        // const hasOpenAnimation = info ? info.openAnimationPlayer : false;
+        // const hasCloseAnimation = info ? info.closeAnimationPlayer : false;
+        // if (hasOpenAnimation || !(this._collapsed || hasCloseAnimation)) {
+        //     return;
+        // }
 
-        if (!info) {
-            this._overlayId = this.overlayService.attach(this.elementRef, overlaySettings);
-        }
+        // if (!info) {
+        //     this._overlayId = this.overlayService.attach(this.elementRef, overlaySettings);
+        // }
 
         this._collapsed = false;
         this.cdr.detectChanges();
 
-        const openEventArgs: CancelableEventArgs = { cancel: false };
-        this.onOpening.emit(openEventArgs);
-        if (openEventArgs.cancel) {
-            this._collapsed = true;
-            this.cdr.detectChanges();
-            return;
-        }
+        // const openEventArgs: CancelableEventArgs = { cancel: false };
+        // this.onOpening.emit(openEventArgs);
+        // if (openEventArgs.cancel) {
+        //     this._collapsed = true;
+        //     this.cdr.detectChanges();
+        //     return;
+        // }
 
-        this.overlayService.show(this._overlayId, overlaySettings);
-
-        this.unsubscribe();
-        this._overlayOpenedSub = this.overlayService.onOpened.pipe(...this._overlaySubFilter).subscribe(() => {
-            this.onOpened.emit();
+        // this.overlayService.show(this._overlayId, overlaySettings);
+        const overlayConfig = new OverlayConfig({
+            positionStrategy: this.angularOverlay.position()
+                .flexibleConnectedTo(overlaySettings.positionStrategy.settings.target as ElementRef)
+                .withPositions([
+                    {
+                        offsetX: 0,
+                        offsetY: 0,
+                        originX: 'start',
+                        originY: 'bottom',
+                        overlayX: 'start',
+                        overlayY: 'top'
+                    }
+                ]),
+            scrollStrategy: this.angularOverlay.scrollStrategies.reposition({
+                scrollThrottle: 50,
+                autoClose: true
+            })
         });
+        const overlayRef = this.angularOverlay.create(overlayConfig);
+        const _portal = new TemplatePortal(overlaySettings.templateRef, this.viewContainerRef);
+        overlayRef.attach(_portal);
 
-        this._overlayClosingSub = this.overlayService
-            .onClosing
-            .pipe(...this._overlaySubFilter)
-            .subscribe((e: OverlayClosingEventArgs) => {
-                const eventArgs: CancelableBrowserEventArgs = { cancel: false, event: e.event };
-                this.onClosing.emit(eventArgs);
-                e.cancel = eventArgs.cancel;
+        // this.unsubscribe();
+        // this._overlayOpenedSub = this.overlayService.onOpened.pipe(...this._overlaySubFilter).subscribe(() => {
+        //     this.onOpened.emit();
+        // });
 
-                //  in case event is not canceled this will close the toggle and we need to unsubscribe.
-                //  Otherwise if for some reason, e.g. close on outside click, close() gets called before
-                //  onClosed was fired we will end with calling onClosing more than once
-                if (!e.cancel) {
-                    this.clearSubscription(this._overlayClosingSub);
-                }
-            });
+        // this._overlayClosingSub = this.overlayService
+        //     .onClosing
+        //     .pipe(...this._overlaySubFilter)
+        //     .subscribe((e: OverlayClosingEventArgs) => {
+        //         const eventArgs: CancelableBrowserEventArgs = { cancel: false, event: e.event };
+        //         this.onClosing.emit(eventArgs);
+        //         e.cancel = eventArgs.cancel;
 
-        this._overlayClosedSub = this.overlayService.onClosed
-            .pipe(...this._overlaySubFilter)
-            .subscribe(this.overlayClosed);
+        //         //  in case event is not canceled this will close the toggle and we need to unsubscribe.
+        //         //  Otherwise if for some reason, e.g. close on outside click, close() gets called before
+        //         //  onClosed was fired we will end with calling onClosing more than once
+        //         if (!e.cancel) {
+        //             this.clearSubscription(this._overlayClosingSub);
+        //         }
+        //     });
+
+        // this._overlayClosedSub = this.overlayService.onClosed
+        //     .pipe(...this._overlaySubFilter)
+        //     .subscribe(this.overlayClosed);
     }
 
     /**
@@ -233,15 +261,15 @@ export class IgxToggleDirective implements IToggleView, OnInit, OnDestroy {
      * ```
      */
     public close() {
-        //  if toggle is collapsed do nothing
-        //  if there is close animation do nothing, toggle will close anyway
-        const info = this.overlayService.getOverlayById(this._overlayId);
-        const hasCloseAnimation = info ? info.closeAnimationPlayer : false;
-        if (this._collapsed || hasCloseAnimation) {
-            return;
-        }
+        // //  if toggle is collapsed do nothing
+        // //  if there is close animation do nothing, toggle will close anyway
+        // const info = this.overlayService.getOverlayById(this._overlayId);
+        // const hasCloseAnimation = info ? info.closeAnimationPlayer : false;
+        // if (this._collapsed || hasCloseAnimation) {
+        //     return;
+        // }
 
-        this.overlayService.hide(this._overlayId);
+        // this.overlayService.hide(this._overlayId);
     }
 
     /**
@@ -478,6 +506,6 @@ export class IgxOverlayOutletDirective {
 @NgModule({
     declarations: [IgxToggleDirective, IgxToggleActionDirective, IgxOverlayOutletDirective],
     exports: [IgxToggleDirective, IgxToggleActionDirective, IgxOverlayOutletDirective],
-    providers: [IgxNavigationService]
+    providers: [IgxNavigationService, Overlay]
 })
 export class IgxToggleModule { }
