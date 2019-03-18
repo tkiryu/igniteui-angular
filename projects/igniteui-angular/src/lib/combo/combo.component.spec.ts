@@ -255,8 +255,6 @@ describe('igxCombo', () => {
             expect(dropdown).toBeDefined();
             expect(dropdown.focusedItem).toBeFalsy();
             expect(dropdown.virtDir).toBeDefined();
-            const mockFn = () => dropdown.navigatePrev();
-            expect(mockFn).toThrow();
             expect(dropdown.focusedItem).toEqual(null);
             expect(combo.collapsed).toBeTruthy();
             combo.toggle();
@@ -264,17 +262,18 @@ describe('igxCombo', () => {
             fix.detectChanges();
             expect(document.activeElement).toEqual(combo.searchInput.nativeElement);
             expect(combo.collapsed).toBeFalsy();
-            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'ArrowDown'}));
+            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'ArrowDown' }));
             fix.detectChanges();
             expect(dropdown.focusedItem).toBeTruthy();
             expect(dropdown.focusedItem.itemIndex).toEqual(0);
             expect(dropdown.virtDir.state.startIndex).toEqual(0);
-            spyOn(dropdown, 'onBlur').and.callThrough();
             dropdown.navigatePrev();
             tick();
             fix.detectChanges();
+            tick();
+            fix.detectChanges();
             expect(document.activeElement).toEqual(combo.searchInput.nativeElement);
-            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'ArrowDown'}));
+            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'ArrowDown' }));
             fix.detectChanges();
             expect(dropdown.focusedItem).toBeTruthy();
             expect(dropdown.focusedItem.itemIndex).toEqual(0);
@@ -284,16 +283,16 @@ describe('igxCombo', () => {
             expect(dropdown.focusedItem).toBeTruthy();
             expect(dropdown.focusedItem.itemIndex).toEqual(1);
             expect(dropdown.virtDir.state.startIndex).toEqual(0);
-            spyOn(IgxDropDownBase.prototype, 'navigatePrev').and.callThrough();
+            spyOn(dropdown, 'navigatePrev').and.callThrough();
             dropdown.navigatePrev();
             tick();
             expect(dropdown.focusedItem).toBeTruthy();
             expect(dropdown.focusedItem.itemIndex).toEqual(0);
             expect(dropdown.virtDir.state.startIndex).toEqual(0);
-            expect(IgxDropDownBase.prototype.navigatePrev).toHaveBeenCalledTimes(1);
+            expect(dropdown.navigatePrev).toHaveBeenCalledTimes(1);
         }));
 
-        it('Should properly call dropdown navigateNext with virutal items', ( async () => {
+        it('Should properly call dropdown navigateNext with virutal items', (async () => {
             const fix = TestBed.createComponent(IgxComboSampleComponent);
             fix.detectChanges();
             const combo = fix.componentInstance.combo;
@@ -303,8 +302,8 @@ describe('igxCombo', () => {
             expect(dropdown.focusedItem).toBeFalsy();
             expect(dropdown.virtDir).toBeDefined();
             const mockClick = jasmine.createSpyObj('event', ['preventDefault', 'stopPropagation']);
-            const virtualMockUP = spyOn<any>(dropdown, 'navigateUp').and.callThrough();
-            const virtualMockDOWN = spyOn<any>(dropdown, 'navigateDown').and.callThrough();
+            const virtualMockUP = spyOn<any>(dropdown, 'navigatePrev').and.callThrough();
+            const virtualMockDOWN = spyOn<any>(dropdown, 'navigateNext').and.callThrough();
             // expect(mockFn).toThrow();
             expect(dropdown.focusedItem).toEqual(null);
             expect(combo.collapsed).toBeTruthy();
@@ -367,11 +366,11 @@ describe('igxCombo', () => {
             await wait(30);
             fix.detectChanges();
             expect(virtualMockDOWN).toHaveBeenCalledTimes(3);
-            spyOn(dropdown, 'onBlur').and.callThrough();
             dropdown.navigatePrev();
             await wait(30);
             fix.detectChanges();
-            expect(virtualMockUP).toHaveBeenCalledTimes(0);
+            // Called once before the `await` and called once more, because item @ index 0 is a header
+            expect(virtualMockUP).toHaveBeenCalledTimes(2);
             expect(virtualMockDOWN).toHaveBeenCalledTimes(3);
         }));
         it('Should call toggle properly', fakeAsync(() => {
@@ -439,8 +438,8 @@ describe('igxCombo', () => {
             combo.toggle();
             tick();
             fix.detectChanges();
-            const virtualSpyUP = spyOn<any>(dropdown, 'navigateUp');
-            const virtualSpyDOWN = spyOn<any>(dropdown, 'navigateDown');
+            const virtualSpyUP = spyOn(dropdown, 'navigatePrev');
+            const virtualSpyDOWN = spyOn(dropdown, 'navigateNext');
             spyOn(IgxComboDropDownComponent.prototype, 'navigateItem').and.callThrough();
             dropdown.navigateItem(0);
             fix.detectChanges();
@@ -451,7 +450,7 @@ describe('igxCombo', () => {
             dropdown.navigateNext();
             expect(IgxComboDropDownComponent.prototype.navigateItem).toHaveBeenCalledTimes(2);
             expect(virtualSpyDOWN).toHaveBeenCalled();
-            expect(virtualSpyUP).not.toHaveBeenCalled();
+            expect(virtualSpyUP).toHaveBeenCalled();
         }));
         it('Should handle handleKeyDown calls', fakeAsync(() => {
             const fix = TestBed.createComponent(IgxComboSampleComponent);
@@ -463,19 +462,19 @@ describe('igxCombo', () => {
             spyOn(combo, 'selectAllItems');
             spyOn(combo, 'toggle');
             spyOn(combo.dropdown, 'onFocus').and.callThrough();
-            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'A'}));
+            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'A' }));
             combo.handleKeyUp(new KeyboardEvent('keyup', {}));
             expect(combo.selectAllItems).toHaveBeenCalledTimes(0);
             expect(combo.dropdown.onFocus).toHaveBeenCalledTimes(0);
-            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'Enter'}));
+            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'Enter' }));
             expect(combo.selectAllItems).toHaveBeenCalledTimes(0);
             spyOnProperty(combo, 'filteredData', 'get').and.returnValue([1]);
-            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'Enter'}));
+            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'Enter' }));
             expect(combo.selectAllItems).toHaveBeenCalledTimes(0);
-            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'ArrowDown'}));
+            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'ArrowDown' }));
             expect(combo.selectAllItems).toHaveBeenCalledTimes(0);
             expect(combo.dropdown.onFocus).toHaveBeenCalledTimes(1);
-            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'Escape'}));
+            combo.handleKeyUp(new KeyboardEvent('keyup', { key: 'Escape' }));
             expect(combo.toggle).toHaveBeenCalledTimes(1);
         }));
         it('Dropdown button should open/close dropdown list', fakeAsync(() => {
@@ -671,6 +670,8 @@ describe('igxCombo', () => {
                         dropdownContainer = fixture.debugElement.query(By.css('.' + CSS_CLASS_CONTAINER)).nativeElement;
                         firstVisibleItem = dropdownContainer.querySelector('.' + CSS_CLASS_DROPDOWNLISTITEM + ':first-child');
                         lastVisibleItem = dropdownContainer.querySelector('.' + CSS_CLASS_DROPDOWNLISTITEM + ':last-child');
+                        expect(firstVisibleItem.classList.contains(CSS_CLASS_FOCUSED)).toBeTruthy();
+                        expect(lastVisibleItem.classList.contains(CSS_CLASS_FOCUSED)).toBeFalsy();
                         expect(firstVisibleItem.textContent.trim()).toEqual(combo.data[0]);
                         expect(lastVisibleItem.textContent.trim()).toEqual(combo.data[10]);
                         combo.dropdown.virtDir.scrollTo(10);
@@ -680,7 +681,7 @@ describe('igxCombo', () => {
                             firstVisibleItem = dropdownContainer.querySelector('.' + CSS_CLASS_DROPDOWNLISTITEM + ':first-child');
                             lastVisibleItem = dropdownContainer.querySelector('.' + CSS_CLASS_DROPDOWNLISTITEM + ':last-child');
                             expect(firstVisibleItem.classList.contains(CSS_CLASS_FOCUSED)).toBeFalsy();
-                            expect(lastVisibleItem.classList.contains(CSS_CLASS_FOCUSED)).toBeTruthy();
+                            expect(lastVisibleItem.classList.contains(CSS_CLASS_FOCUSED)).toBeFalsy();
                             expect(lastVisibleItem.textContent.trim()).toEqual(combo.data[11]);
                             dropdownContent.dispatchEvent(homeEvent);
                             setTimeout(function () {
@@ -1384,7 +1385,7 @@ describe('igxCombo', () => {
             fixture.detectChanges();
             const dropdownList = fixture.debugElement.query(By.css('.' + CSS_CLASS_DROPDOWNLIST)).nativeElement;
             const verifyOnSelectionChangeEventIsFired = function (itemIndex: number) {
-                const dropdownItems =  fixture.debugElement.queryAll(By.css('.' + CSS_CLASS_DROPDOWNLISTITEM));
+                const dropdownItems = fixture.debugElement.queryAll(By.css('.' + CSS_CLASS_DROPDOWNLISTITEM));
                 const checkbox = dropdownItems[itemIndex];
                 checkbox.triggerEventHandler('click', mockEvent);
                 fixture.detectChanges();
@@ -1831,18 +1832,18 @@ describe('igxCombo', () => {
             tick();
             fixture.detectChanges();
 
-            dropdown.navigateItem(2);
+            dropdown.navigateItem(2); // Componenent is virtualized, so this will focus the ACTUAL 3rd item
             fixture.detectChanges();
 
             const dropdownList = fixture.debugElement.query(By.css('.' + CSS_CLASS_DROPDOWNLIST)).nativeElement;
             const dropdownItems = dropdownList.querySelectorAll('.' + CSS_CLASS_DROPDOWNLISTITEM);
-            const focusedItem_1 = dropdownItems[2];
+            const focusedItem_1 = dropdownItems[1];
             expect(focusedItem_1.classList.contains(CSS_CLASS_FOCUSED)).toBeTruthy();
 
             // Change focus
             dropdown.navigateItem(6);
             fixture.detectChanges();
-            const focusedItem_2 = dropdownItems[6];
+            const focusedItem_2 = dropdownItems[5];
             expect(focusedItem_2.classList.contains(CSS_CLASS_FOCUSED)).toBeTruthy();
             expect(focusedItem_1.classList.contains(CSS_CLASS_FOCUSED)).toBeFalsy();
         }));
@@ -2070,7 +2071,7 @@ describe('igxCombo', () => {
             verifyComboData();
             // index is at bottom
             expect(combo.dropdown.virtDir.state.startIndex + combo.dropdown.virtDir.state.chunkSize - 1)
-            .toEqual(productIndex);
+                .toEqual(productIndex);
             await wait(20);
 
             productIndex = 485;
@@ -2080,7 +2081,7 @@ describe('igxCombo', () => {
             verifyComboData();
             // index is at bottom
             expect(combo.dropdown.virtDir.state.startIndex + combo.dropdown.virtDir.state.chunkSize - 1)
-            .toEqual(productIndex);
+                .toEqual(productIndex);
             await wait(20);
 
             productIndex = 873;
@@ -2883,7 +2884,7 @@ describe('igxCombo', () => {
             expect(combo.value).toEqual('My New Custom Item');
         }));
 
-       it('Disable/Enable filtering at runtime', fakeAsync(() => {
+        it('Disable/Enable filtering at runtime', fakeAsync(() => {
             const fix = TestBed.createComponent(IgxComboInputTestComponent);
             fix.detectChanges();
             const combo = fix.componentInstance.combo;
@@ -2954,7 +2955,7 @@ describe('igxCombo', () => {
 
     describe('Form control tests: ', () => {
 
-       it('Should properly initialize when used as a form control', fakeAsync(() => {
+        it('Should properly initialize when used as a form control', fakeAsync(() => {
             const fix = TestBed.createComponent(IgxComboFormComponent);
             fix.detectChanges();
             const combo = fix.componentInstance.combo;
