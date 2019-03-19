@@ -57,7 +57,6 @@ export interface OverlaySettings {
      * Exclude the position strategy target for outside clicks
      */
     excludePositionTarget?: boolean;
-    templateRef?: TemplateRef<any>;
 }
 
 export interface OverlayEventArgs {

@@ -528,14 +528,10 @@ export class IgxTooltipDirective extends IgxToggleDirective {
     }
 
     /** @hidden */
-    constructor(
-        elementRef: ElementRef,
-        cdr: ChangeDetectorRef,
-        @Inject(IgxOverlayService) overlayService: IgxOverlayService,
-        @Optional() navigationService: IgxNavigationService) {
+    constructor() {
         // D.P. constructor duplication due to es6 compilation, might be obsolete in the future
         // super(elementRef, cdr, overlayService, navigationService);
-        super(elementRef, null, cdr, overlayService, null, null);
+        super();
     }
 
     /**

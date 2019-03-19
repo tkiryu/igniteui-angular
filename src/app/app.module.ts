@@ -4,6 +4,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgModule } from '@angular/core';
 import { Overlay } from '@angular/cdk/overlay';
+import {ScrollDispatchModule} from '@angular/cdk/scrolling';
 
 import {
     IgxIconModule, IgxGridModule, IgxExcelExporterService, IgxCsvExporterService, IgxOverlayService,
@@ -187,6 +188,7 @@ const components = [
         IgxColumnHidingModule,
         IgxDragDropModule,
         SharedModule,
+        ScrollDispatchModule,
         routing
     ],
     providers: [

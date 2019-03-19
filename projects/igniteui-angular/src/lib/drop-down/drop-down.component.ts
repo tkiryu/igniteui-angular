@@ -206,7 +206,8 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
     }
 
     protected get scrollContainer() {
-        return this.toggleDirective.element;
+        // return this.toggleDirective.element;
+        return this.elementRef.nativeElement;
     }
 
     constructor(
@@ -227,7 +228,6 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
      * ```
      */
     public open(overlaySettings?: OverlaySettings) {
-        overlaySettings.templateRef = this.templateRef;
         this.toggleDirective.open(overlaySettings);
     }
 
@@ -251,7 +251,6 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
      */
     public toggle(overlaySettings?: OverlaySettings) {
         if (this.collapsed || this.toggleDirective.isClosing) {
-            overlaySettings.templateRef = this.templateRef;
             this.open(overlaySettings);
         } else {
             this.close();
