@@ -249,11 +249,6 @@ export class IgxToggleDirective implements IToggleView, OnInit, OnDestroy {
 
         this._templatePortal = new TemplatePortal(this.templateRef, this.viewContainerRef);
         this._view = this._overlayRef.attach(this._templatePortal);
-        if (!overlaySettings.modal && this._overlayRef.backdropElement) {
-            this._overlayRef.backdropElement.style.pointerEvents = 'none';
-            this._overlayRef.backdropElement.style.backgroundColor = '';
-            this._overlayRef.backdropElement.style.opacity = '';
-        }
 
         if (overlaySettings.positionStrategy.settings.openAnimation) {
             this.playOpenAnimation(overlaySettings.positionStrategy.settings.openAnimation, this._view.rootNodes[0]);
