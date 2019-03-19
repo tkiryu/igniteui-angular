@@ -1,6 +1,8 @@
 # Ignite UI for Angular Change Log
 ## 7.2.2
 - **Themes** - Add support for gradients and images as values for component themes via the component theme functions.
+- `IgxToggleDirective`
+    - when `show` and `hide` methods are called, `onAnimation` event fires. In the arguments of this event there is a reference to the `animationPlayer`, `animationType` (either `open` or `close`) and to the `overlay id` of the toggle component's instance.
 
 All notable changes for each version of this project will be documented in this file.
 ## 7.2.1
