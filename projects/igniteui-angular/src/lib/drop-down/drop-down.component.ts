@@ -28,7 +28,7 @@ import { CancelableEventArgs, CancelableBrowserEventArgs, isIE } from '../core/u
 import { IgxSelectionAPIService } from '../core/selection';
 import { Subject, Subscription } from 'rxjs';
 import { IgxDropDownItemBase } from './drop-down-item.base';
-import { OverlaySettings } from '../services';
+import { OverlaySettings, OverlayAnimationEventArgs } from '../services';
 import { TemplatePortal } from '@angular/cdk/portal/index';
 import { Overlay, ScrollStrategy, OverlayRef } from '@angular/cdk/overlay';
 
@@ -206,8 +206,7 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
     }
 
     protected get scrollContainer() {
-        // return this.toggleDirective.element;
-        return this.elementRef.nativeElement;
+        return this.toggleDirective.element;
     }
 
     constructor(
@@ -289,7 +288,7 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
         if (e.cancel) {
             return;
         }
-        this.scrollToItem(this.selectedItem);
+        // this.scrollToItem(this.selectedItem);
     }
 
     /**
@@ -325,6 +324,15 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
     /**
      * @hidden @internal
      */
+    public onToggleAnimation(ev: OverlayAnimationEventArgs) {
+        if (ev.animationType === 'open') {
+            this.scrollToItem(this.selectedItem);
+        }
+    }
+
+    /**
+     * @hidden @internal
+     */
     public ngOnDestroy() {
         this.destroy$.next(true);
         this.destroy$.complete();
@@ -340,10 +348,10 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
         //  allowing animation to start and prevent dropdown flickering
         if (isIE()) {
             setTimeout(() => {
-                this.scrollContainer.scrollTop = (itemPosition);
+                item.element.nativeElement.parentElement.scrollTop = (itemPosition);
             }, 1);
         } else {
-            this.scrollContainer.scrollTop = (itemPosition);
+            item.element.nativeElement.parentElement.scrollTop = (itemPosition);
         }
     }
 
@@ -354,11 +362,11 @@ export class IgxDropDownComponent extends IgxDropDownBase implements IDropDownBa
         }
 
         const elementRect = item.element.nativeElement.getBoundingClientRect();
-        const parentRect = this.scrollContainer.getBoundingClientRect();
+        const parentRect = item.element.nativeElement.parentElement.getBoundingClientRect();
         const scrollDelta = parentRect.top - elementRect.top;
-        let scrollPosition = this.scrollContainer.scrollTop - scrollDelta;
+        let scrollPosition = item.element.nativeElement.parentElement.scrollTop - scrollDelta;
 
-        const dropDownHeight = this.scrollContainer.clientHeight;
+        const dropDownHeight = item.element.nativeElement.parentElement.clientHeight;
         scrollPosition -= dropDownHeight / 2;
         scrollPosition += item.elementHeight / 2;
 

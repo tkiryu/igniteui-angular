@@ -35,17 +35,18 @@ import {
     GlobalPositionStrategy as IgxGlobalPositionStrategy,
     NoOpScrollStrategy,
     BlockScrollStrategy,
-    CloseScrollStrategy
+    CloseScrollStrategy,
+    AutoPositionStrategy
 } from '../../services';
 import { filter, takeUntil } from 'rxjs/operators';
 import { Subscription, Subject, MonoTypeOperatorFunction, from } from 'rxjs';
-import { OverlayClosingEventArgs, VerticalAlignment, HorizontalAlignment, Point } from '../../services/overlay/utilities';
+import { OverlayClosingEventArgs, VerticalAlignment, HorizontalAlignment, Point, OverlayAnimationEventArgs } from '../../services/overlay/utilities';
 import { CancelableEventArgs, CancelableBrowserEventArgs } from '../../core/utils';
 import { DeprecateProperty } from '../../core/deprecateDecorators';
 import { CdkPortal, TemplatePortal } from '@angular/cdk/portal';
 import { AnimationBuilder } from '@angular/animations';
 import { ScrollDispatchModule } from '@angular/cdk/scrolling';
-import { FlexibleConnectedPositionStrategyOrigin } from '@angular/cdk/overlay/typings/position/flexible-connected-position-strategy';
+import { FlexibleConnectedPositionStrategyOrigin, ConnectedPosition } from '@angular/cdk/overlay/typings/position/flexible-connected-position-strategy';
 
 @Directive({
     exportAs: 'toggle',
@@ -144,6 +145,9 @@ export class IgxToggleDirective implements IToggleView, OnInit, OnDestroy {
      */
     @Output()
     public onClosing = new EventEmitter<CancelableBrowserEventArgs>();
+
+    @Output()
+    public onAnimation = new EventEmitter<OverlayAnimationEventArgs>();
 
     private _collapsed = true;
     /**
@@ -405,20 +409,42 @@ export class IgxToggleDirective implements IToggleView, OnInit, OnDestroy {
                     break;
             }
 
+            let positions: ConnectedPosition[] = [
+                {
+                    offsetX: 0,
+                    offsetY: 0,
+                    originX,
+                    originY,
+                    overlayX,
+                    overlayY
+                }
+            ];
+
+            if (overlaySettings.positionStrategy instanceof AutoPositionStrategy) {
+                const autoOriginX: 'start' | 'center' | 'end' = originX === 'center' ? 'center' :
+                    originX === 'start' ? 'end' : 'start';
+                const autoOriginY: 'top' | 'center' | 'bottom' = originY === 'center' ? 'center' :
+                    originY === 'top' ? 'bottom' : 'top';
+                const autoOverlayX: 'start' | 'center' | 'end' = overlayX === 'center' ? 'center' :
+                    overlayX === 'start' ? 'end' : 'start';
+                const autoOverlayY: 'top' | 'center' | 'bottom' = overlayY === 'center' ? 'center' :
+                    overlayY === 'top' ? 'bottom' : 'top';
+
+                positions.push({
+                    offsetX: 0,
+                    offsetY: 0,
+                    originX: autoOriginX,
+                    originY:autoOriginY,
+                    overlayX: autoOverlayX,
+                    overlayY: autoOverlayY
+                });
+            }
+
             overlayConfig.positionStrategy = this.angularOverlay
                 .position()
                 .flexibleConnectedTo(origin)
                 .withLockedPosition(true)
-                .withPositions([
-                    {
-                        offsetX: 0,
-                        offsetY: 0,
-                        originX,
-                        originY,
-                        overlayX,
-                        overlayY
-                    }
-                ]);
+                .withPositions(positions);
         } else if (overlaySettings.positionStrategy instanceof IgxGlobalPositionStrategy) {
             overlayConfig.positionStrategy = this.angularOverlay
                 .position()
@@ -475,7 +501,7 @@ export class IgxToggleDirective implements IToggleView, OnInit, OnDestroy {
             this.onOpened.emit();
         });
 
-        // this.onAnimation.emit({ id: info.id, animationPlayer: info.openAnimationPlayer, animationType: 'open' });
+        this.onAnimation.emit({ id: this.id, animationPlayer: openAnimationPlayer, animationType: 'open' });
         openAnimationPlayer.play();
     }
 
@@ -493,7 +519,7 @@ export class IgxToggleDirective implements IToggleView, OnInit, OnDestroy {
             this.onClosed.emit();
         });
 
-        // this.onAnimation.emit({ id: info.id, animationPlayer: info.closeAnimationPlayer, animationType: 'close' });
+        this.onAnimation.emit({ id: this.id, animationPlayer: closeAnimationPlayer, animationType: 'close' });
         closeAnimationPlayer.play();
     }
 
