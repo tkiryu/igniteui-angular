@@ -15,7 +15,10 @@ import {
     Inject,
     ChangeDetectorRef,
     HostListener,
-    NgModuleRef
+    NgModuleRef,
+    ViewContainerRef,
+    EmbeddedViewRef,
+    ComponentRef
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
@@ -37,7 +40,14 @@ import {
     VerticalAlignment,
     HorizontalAlignment,
     PositionSettings,
-    ConnectedPositioningStrategy
+    ConnectedPositioningStrategy,
+    Point,
+    GlobalPositionStrategy as IgxGlobalPositionStrategy,
+    AutoPositionStrategy,
+    NoOpScrollStrategy,
+    BlockScrollStrategy,
+    CloseScrollStrategy,
+    AbsoluteScrollStrategy
 } from '../services/index';
 import { DateRangeDescriptor } from '../core/dates/dateRange';
 import { EditorProvider } from '../core/edit-provider';
@@ -54,6 +64,10 @@ import { KEYS } from '../core/utils';
 import { IgxDatePickerTemplateDirective } from './date-picker.directives';
 import { IgxCalendarContainerComponent } from './calendar-container.component';
 import { InteractionMode } from '../core/enums';
+import { Overlay, OverlayConfig, OverlayRef, GlobalPositionStrategy } from '@angular/cdk/overlay';
+import { TemplatePortal, ComponentPortal } from '@angular/cdk/portal';
+import { FlexibleConnectedPositionStrategyOrigin, ConnectedPosition } from '@angular/cdk/overlay/typings/position/flexible-connected-position-strategy';
+import { AnimationBuilder } from '@angular/animations';
 
 let NEXT_ID = 0;
 
@@ -384,8 +398,14 @@ export class IgxDatePickerComponent implements IDatePicker, ControlValueAccessor
         this._transformedDate = value;
     }
 
-    constructor(@Inject(IgxOverlayService) private _overlayService: IgxOverlayService, public element: ElementRef,
-        private _cdr: ChangeDetectorRef, private _moduleRef: NgModuleRef<any>) { }
+    constructor(
+        @Inject(IgxOverlayService) private _overlayService: IgxOverlayService,
+        public element: ElementRef,
+        private _cdr: ChangeDetectorRef,
+        private _ngOverlay: Overlay,
+        private builder: AnimationBuilder,
+        private _viewContainerRef: ViewContainerRef,
+        private _moduleRef: NgModuleRef<any>) { }
 
     /**
      * Gets the input group template.
@@ -863,6 +883,10 @@ export class IgxDatePickerComponent implements IDatePicker, ControlValueAccessor
         this._onChangeCallback(null);
     }
 
+    // tslint:disable: member-ordering
+    private _overlayRef: OverlayRef;
+    private _view: ComponentRef<IgxCalendarContainerComponent>;
+    private settings: OverlaySettings;
     /**
      * Open the calendar.
      *
@@ -875,21 +899,45 @@ export class IgxDatePickerComponent implements IDatePicker, ControlValueAccessor
         switch (this.mode) {
             case InteractionMode.Dialog: {
                 this.hasHeader = true;
-                const modalOverlay = (this.modalOverlaySettings !== undefined) ? this._modalOverlay : this._modalOverlaySettings;
-                this._componentID = this._overlayService.attach(IgxCalendarContainerComponent, modalOverlay, this._moduleRef);
-                this._overlayService.show(this._componentID, modalOverlay);
+                this.settings = (this.modalOverlaySettings !== undefined) ? this._modalOverlay : this._modalOverlaySettings;
+                this._componentID = this._overlayService.attach(IgxCalendarContainerComponent, this.settings, this._moduleRef);
+                // this._overlayService.show(this._componentID, modalOverlay);
+
+                const overlayConfig = this.translateOverlaySettingsToOverlayConfig(this.settings);
+                this._overlayRef = this._ngOverlay.create(overlayConfig);
+                const componentPortal = new ComponentPortal(IgxCalendarContainerComponent);
+                this._view = this._overlayRef.attach(componentPortal);
                 break;
             }
             case InteractionMode.DropDown: {
                 this.hasHeader = false;
-                const dropDownOverlay =
+                this.settings =
                     (this.dropDownOverlaySettings !== undefined) ? this._dropDownOverlay : this._dropDownOverlaySettings;
-                dropDownOverlay.positionStrategy.settings.target = this.editableInputGroup.nativeElement;
-                this._componentID = this._overlayService.attach(IgxCalendarContainerComponent, dropDownOverlay, this._moduleRef);
-                this._overlayService.show(this._componentID, dropDownOverlay);
+                    this.settings.positionStrategy.settings.target = this.editableInputGroup.nativeElement;
+                // this._componentID = this._overlayService.attach(IgxCalendarContainerComponent, dropDownOverlay, this._moduleRef);
+                // this._overlayService.show(this._componentID, dropDownOverlay);
+
+                const overlayConfig = this.translateOverlaySettingsToOverlayConfig(this.settings);
+                this._overlayRef = this._ngOverlay.create(overlayConfig);
+                const componentPortal = new ComponentPortal(IgxCalendarContainerComponent);
+                this._view = this._overlayRef.attach(componentPortal);
                 break;
             }
         }
+
+        this._overlayRef.backdropClick().subscribe(() => this.closeCalendar());
+        this._overlayRef.getConfig().minHeight = 500;
+
+        this._initializeCalendarContainer(this._view.instance);
+        this.collapsed = false;
+        this._onTouchedCallback();
+        this.onOpen.emit(this);
+
+        if (this.calendar) {
+            this._focusCalendarDate();
+        }
+
+        this.playOpenAnimation(this.settings.positionStrategy.settings.openAnimation, this._view.location.nativeElement);
     }
 
     /**
@@ -898,7 +946,15 @@ export class IgxDatePickerComponent implements IDatePicker, ControlValueAccessor
      * @hidden
      */
     public closeCalendar(): void {
-        this._overlayService.hide(this._componentID);
+        // this._overlayService.hide(this._componentID);
+        this._overlayRef.detach();
+        this.collapsed = true;
+        this.onClose.emit(this);
+
+        if (this.getEditElement()) {
+            this.getEditElement().focus();
+        }
+        this.playCloseAnimation(this.settings.positionStrategy.settings.openAnimation, this._view.location.nativeElement);
     }
 
     /**
@@ -1210,7 +1266,193 @@ export class IgxDatePickerComponent implements IDatePicker, ControlValueAccessor
     private _onTouchedCallback: () => void = () => { };
 
     private _onChangeCallback: (_: Date) => void = () => { };
-}
+
+
+    translateOverlaySettingsToOverlayConfig(overlaySettings: OverlaySettings): OverlayConfig {
+        const overlayConfig = new OverlayConfig();
+        if (!overlaySettings.positionStrategy) {
+            overlaySettings.positionStrategy = new IgxGlobalPositionStrategy();
+        }
+        const postilionSettings = overlaySettings.positionStrategy.settings;
+
+        if (overlaySettings.positionStrategy instanceof ConnectedPositioningStrategy) {
+            let origin: FlexibleConnectedPositionStrategyOrigin;
+            if (postilionSettings.target) {
+                if (postilionSettings.target instanceof ElementRef) {
+                    origin = postilionSettings.target as ElementRef;
+                } else if (postilionSettings.target instanceof HTMLElement) {
+                    origin = postilionSettings.target as HTMLElement;
+                } else if (postilionSettings.target instanceof Point) {
+                    origin = {
+                        x: (postilionSettings.target as Point).x,
+                        y: (postilionSettings.target as Point).y
+                    };
+                }
+            }
+
+            let originX: 'start' | 'center' | 'end';
+            let originY: 'top' | 'center' | 'bottom';
+            let overlayX: 'start' | 'center' | 'end';
+            let overlayY: 'top' | 'center' | 'bottom';
+            switch (postilionSettings.horizontalStartPoint) {
+                case HorizontalAlignment.Left:
+                    originX = 'start';
+                    break;
+                case HorizontalAlignment.Center:
+                    originX = 'center';
+                    break;
+                case HorizontalAlignment.Right:
+                    originX = 'end';
+                    break;
+            }
+
+            switch (postilionSettings.verticalStartPoint) {
+                case VerticalAlignment.Top:
+                    originY = 'top';
+                    break;
+                case VerticalAlignment.Middle:
+                    originY = 'center';
+                    break;
+                case VerticalAlignment.Bottom:
+                    originY = 'bottom';
+                    break;
+            }
+
+            switch (postilionSettings.horizontalDirection) {
+                case HorizontalAlignment.Left:
+                    overlayX = 'end';
+                    break;
+                case HorizontalAlignment.Center:
+                    overlayX = 'center';
+                    break;
+                case HorizontalAlignment.Right:
+                    overlayX = 'start';
+                    break;
+            }
+
+            switch (postilionSettings.verticalDirection) {
+                case VerticalAlignment.Top:
+                    overlayY = 'bottom';
+                    break;
+                case VerticalAlignment.Middle:
+                    overlayY = 'center';
+                    break;
+                case VerticalAlignment.Bottom:
+                    overlayY = 'top';
+                    break;
+            }
+
+            const positions: ConnectedPosition[] = [
+                {
+                    offsetX: 0,
+                    offsetY: 0,
+                    originX,
+                    originY,
+                    overlayX,
+                    overlayY
+                }
+            ];
+
+            if (overlaySettings.positionStrategy instanceof AutoPositionStrategy) {
+                const autoOriginX: 'start' | 'center' | 'end' = originX === 'center' ? 'center' :
+                    originX === 'start' ? 'end' : 'start';
+                const autoOriginY: 'top' | 'center' | 'bottom' = originY === 'center' ? 'center' :
+                    originY === 'top' ? 'bottom' : 'top';
+                const autoOverlayX: 'start' | 'center' | 'end' = overlayX === 'center' ? 'center' :
+                    overlayX === 'start' ? 'end' : 'start';
+                const autoOverlayY: 'top' | 'center' | 'bottom' = overlayY === 'center' ? 'center' :
+                    overlayY === 'top' ? 'bottom' : 'top';
+
+                positions.push({
+                    offsetX: 0,
+                    offsetY: 0,
+                    originX: autoOriginX,
+                    originY:autoOriginY,
+                    overlayX: autoOverlayX,
+                    overlayY: autoOverlayY
+                });
+            }
+
+            overlayConfig.positionStrategy = this._ngOverlay
+                .position()
+                .flexibleConnectedTo(origin)
+                .withPush(false)
+                .withLockedPosition(true)
+                .withFlexibleDimensions(false)
+                .withPositions(positions);
+        } else if (overlaySettings.positionStrategy instanceof IgxGlobalPositionStrategy) {
+            overlayConfig.positionStrategy = this._ngOverlay
+                .position()
+                .global();
+            switch (postilionSettings.horizontalDirection) {
+                case HorizontalAlignment.Left:
+                    (overlayConfig.positionStrategy as GlobalPositionStrategy).left('0');
+                    break;
+                case HorizontalAlignment.Center:
+                    (overlayConfig.positionStrategy as GlobalPositionStrategy).centerHorizontally('0');
+                    break;
+                case HorizontalAlignment.Right:
+                    (overlayConfig.positionStrategy as GlobalPositionStrategy).right('0');
+                    break;
+            }
+
+            switch (postilionSettings.verticalDirection) {
+                case VerticalAlignment.Top:
+                    (overlayConfig.positionStrategy as GlobalPositionStrategy).top('0');
+                    break;
+                case VerticalAlignment.Middle:
+                    (overlayConfig.positionStrategy as GlobalPositionStrategy).centerVertically('0');
+                    break;
+                case VerticalAlignment.Bottom:
+                    (overlayConfig.positionStrategy as GlobalPositionStrategy).bottom('0');
+                    break;
+            }
+        }
+
+        if (overlaySettings.scrollStrategy instanceof NoOpScrollStrategy) {
+            overlayConfig.scrollStrategy = this._ngOverlay.scrollStrategies.noop();
+        } else if (overlaySettings.scrollStrategy instanceof BlockScrollStrategy) {
+            overlayConfig.scrollStrategy = this._ngOverlay.scrollStrategies.block();
+        } else if (overlaySettings.scrollStrategy instanceof CloseScrollStrategy) {
+            overlayConfig.scrollStrategy = this._ngOverlay.scrollStrategies.close();
+        } else if (overlaySettings.scrollStrategy instanceof AbsoluteScrollStrategy) {
+            overlayConfig.scrollStrategy = this._ngOverlay.scrollStrategies.reposition();
+        }
+
+        if (overlaySettings.closeOnOutsideClick || overlaySettings.modal) {
+            overlayConfig.hasBackdrop = true;
+        }
+
+        return overlayConfig;
+    }
+
+    private playOpenAnimation(openAnimation: any, element) {
+        const animationBuilder = this.builder.build(openAnimation);
+        const openAnimationPlayer = animationBuilder.create(element);
+        openAnimationPlayer.onDone(() => {
+            if (openAnimationPlayer) {
+                openAnimationPlayer.reset();
+            }
+        });
+
+        openAnimationPlayer.play();
+    }
+
+    private playCloseAnimation(closeAnimation: any, element) {
+        const animationBuilder = this.builder.build(closeAnimation);
+        const closeAnimationPlayer = animationBuilder.create(element);
+
+        closeAnimationPlayer.onDone(() => {
+            if (closeAnimationPlayer) {
+                closeAnimationPlayer.reset();
+            }
+            this._overlayRef.detach();
+            this._overlayRef.dispose();
+            this.collapsed = true;
+        });
+
+        closeAnimationPlayer.play();
+    }}
 
 /**
  * @hidden
