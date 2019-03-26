@@ -48,12 +48,6 @@ export abstract class IgxHierarchicalGridBaseComponent extends IgxGridBaseCompon
     /**
      * @hidden
      */
-    @ContentChildren(IgxColumnComponent, { read: IgxColumnComponent, descendants: false })
-    public childColumns = new QueryList<IgxColumnComponent>();
-
-    /**
-     * @hidden
-     */
     get maxLevelHeaderDepth() {
         this._maxLevelHeaderDepth = this.columnList.reduce((acc, col) => Math.max(acc, col.level), 0);
         return this._maxLevelHeaderDepth;
@@ -176,15 +170,15 @@ export abstract class IgxHierarchicalGridBaseComponent extends IgxGridBaseCompon
         return ref;
     }
 
-    protected getGridsForIsland(islandKey: string) {
-        return this.hgridAPI.getChildGridsForRowIsland(islandKey);
+    protected getGridsForIsland(rowIslandID: string) {
+        return this.hgridAPI.getChildGridsForRowIsland(rowIslandID);
     }
 
     protected getChildGrid(path: Array<IPathSegment>) {
         if (!path) {
             return;
         }
-        return this.hgridAPI.getChildGrid(path);
+        return this.hgridAPI.getChildGrid(this.id, path);
     }
 }
 

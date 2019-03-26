@@ -13,35 +13,54 @@ export class IgxHierarchicalGridAPIService extends GridBaseAPIService<IgxGridBas
         this.destroyMap.set(layout.id, new Subject<boolean>());
     }
 
-    getChildGrid(path: Array<IPathSegment>) {
+    getChildGrid(id: string, path: Array<IPathSegment>) {
         const currPath = path;
-        let grid;
+        const ownerGrid = this.get(id) as IgxHierarchicalGridComponent;
+        let childGrid;
+        let targetLayout;
         const pathElem = currPath.shift();
-        const childrenForLayout = this.layoutChildGrids.get(pathElem.rowIslandKey);
+        ownerGrid.childLayoutList.forEach((layout) => {
+            if (layout.key === pathElem.rowIslandKey) {
+                 targetLayout = layout;
+            }
+        });
+        const childrenForLayout = this.layoutChildGrids.get(targetLayout.id);
         if (childrenForLayout) {
-            const childGrid = childrenForLayout.get(pathElem.rowID);
+            const grid = childrenForLayout.get(pathElem.rowID);
             if (currPath.length === 0) {
-                grid = childGrid;
+                childGrid = grid;
             } else {
-                grid = childGrid.hgridAPI.getChildGrid(currPath);
+                childGrid = grid.hgridAPI.getChildGrid(grid.id, currPath);
             }
         }
-        return grid;
+        return childGrid;
     }
 
     getChildGrids(inDepth?: boolean) {
-        const allChildren = [];
-        this.layoutChildGrids.forEach((layoutMap) => {
-            layoutMap.forEach((grid) => {
-                allChildren.push(grid);
-                if (inDepth) {
-                    const children = grid.hgridAPI.getChildGrids(inDepth);
-                    children.forEach((item) => {
-                        allChildren.push(item);
-                    });
-                }
+        let allChildren = [];
+        const ownerGrid = Array.from(this.state.values())[0] as IgxHierarchicalGridComponent;
+        if ((!ownerGrid.parent && inDepth) || (ownerGrid.parent && !inDepth)) {
+            this.layouts.forEach((layout) => {
+                allChildren = allChildren.concat(this.getChildGridsForRowIsland(layout.id));
             });
-        });
+        } else if (!ownerGrid.parent) {
+            ownerGrid.childLayoutList.forEach((layout) => {
+                allChildren = allChildren.concat(this.getChildGridsForRowIsland(layout.id));
+            });
+        } else {
+            this.layoutChildGrids.forEach((layoutMap) => {
+                layoutMap.forEach((grid) => {
+                    allChildren.push(grid);
+                    if (inDepth) {
+                        const children = grid.hgridAPI.getChildGrids(inDepth);
+                        children.forEach((item) => {
+                            allChildren.push(item);
+                        });
+                    }
+                });
+            });
+        }
+
         return allChildren;
     }
 
@@ -58,11 +77,11 @@ export class IgxHierarchicalGridAPIService extends GridBaseAPIService<IgxGridBas
         return rowID;
     }
 
-    registerChildGrid(parentRowID: string|object, layoutKey: string, grid: IgxHierarchicalGridComponent) {
-        let childrenForLayout = this.layoutChildGrids.get(layoutKey);
+    registerChildGrid(parentRowID: string|object, layoutID: string, grid: IgxHierarchicalGridComponent) {
+        let childrenForLayout = this.layoutChildGrids.get(layoutID);
         if (!childrenForLayout) {
-            this.layoutChildGrids.set(layoutKey, new Map<any, IgxHierarchicalGridComponent>());
-            childrenForLayout = this.layoutChildGrids.get(layoutKey);
+            this.layoutChildGrids.set(layoutID, new Map<any, IgxHierarchicalGridComponent>());
+            childrenForLayout = this.layoutChildGrids.get(layoutID);
         }
         childrenForLayout.set(parentRowID, grid);
     }
@@ -71,8 +90,8 @@ export class IgxHierarchicalGridAPIService extends GridBaseAPIService<IgxGridBas
       return this.layouts.get(id);
     }
 
-    getChildGridsForRowIsland(layoutKey): IgxHierarchicalGridComponent[] {
-        const childrenForLayout = this.layoutChildGrids.get(layoutKey);
+    getChildGridsForRowIsland(layoutID): IgxHierarchicalGridComponent[] {
+        const childrenForLayout = this.layoutChildGrids.get(layoutID);
         const children = [];
         if (childrenForLayout) {
             childrenForLayout.forEach((child) => {
@@ -82,8 +101,8 @@ export class IgxHierarchicalGridAPIService extends GridBaseAPIService<IgxGridBas
         return children;
     }
 
-    getChildGridByID(layoutKey, rowID) {
-        const childrenForLayout = this.layoutChildGrids.get(layoutKey);
+    getChildGridByID(layoutID, rowID) {
+        const childrenForLayout = this.layoutChildGrids.get(layoutID);
         return childrenForLayout.get(rowID);
     }
 }
